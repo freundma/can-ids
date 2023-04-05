@@ -140,7 +140,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--indir', type=str, default="./Data/TFRecord")
     parser.add_argument('--outdir', type=str, default="./Data")
-    parser.add_argument('--attack_type', type=str, nargs='+', default=['all'])
+    parser.add_argument('--attack_type', type=str, nargs='+', default='all')
     parser.add_argument('--normal', type=bool, default=True)
     parser.add_argument('--train_ratio', type=float, default=0.7)
     parser.add_argument('--train_label_ratio', type=float, default=0.1)
@@ -148,9 +148,9 @@ if __name__ == '__main__':
     parser.add_argument('--test_ratio', type=float, default=0.15)
     args = parser.parse_args()
 
-    if args.attack_type[0] == 'all':
+    if args.attack_type == 'all':
         attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM']
-    elif args.attack_type[0] == 'road':
+    elif args.attack_type == 'road':
         attack_types = ['correlated_signal_attack_1_masquerade',
                         'correlated_signal_attack_1',
                         'correlated_signal_attack_2_masquerade',
@@ -179,7 +179,7 @@ if __name__ == '__main__':
                         'reverse_light_on_attack_3_masquerade',
                         'reverse_light_on_attack_3'
                         ]
-    elif args.attack_type[0] == None:
+    elif args.attack_type == None:
         attack_types = None
     else:
         attack_types = args.attack_type

@@ -1,7 +1,3 @@
-/datasets/hcrl
-/datasets/road
-/datasets/syncan
-/datasets/tu-eindhoven
 /semi-supervised/Results
 /unsupervised/output_model
 /unsupervised/plot_dir

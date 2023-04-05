@@ -165,10 +165,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--indir', type=str, default="./Data/Car-Hacking")
     parser.add_argument('--outdir', type=str, default="./Data/TFRecord/")
-    parser.add_argument('--attack_type', type=str, default="tu", nargs='+')
+    parser.add_argument('--attack_type', type=str, default="hcrl", nargs='+')
     args = parser.parse_args()
     
-    if args.attack_type == 'all':
+    if args.attack_type == 'hcrl':
         attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM']
     elif (args.attack_type == 'tu'):
         attack_types = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay']

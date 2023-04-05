@@ -14,8 +14,8 @@ from AAE import AAE
 from CAAE import CAAE
 import argparse
 # don't use GPUs for the moment
-#gpus= tf.config.experimental.list_physical_devices('GPU')
-#tf.config.experimental.set_memory_growth(gpus[0], True)
+gpus= tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(gpus[0], True)
 
 class Model:
     def __init__(self, model='AAE', data_dir='./Data/', unknown_attack=None, input_dim=29*29, z_dim=10, batch_size=100, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
