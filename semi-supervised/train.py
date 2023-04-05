@@ -64,7 +64,7 @@ class Model:
         if self.unknown_attack != None:
             self.results_path = './Results/unknown/{}'.format(self.unknown_attack)
         else:
-            self.results_path = './Results/{}/'.format(self.attack)
+            self.results_path = './Data/hcrl/Results/{}/'.format(self.attack)
         print('Unknown attack: {}'.format(self.unknown_attack if self.unknown_attack!='' else 'None'))
         print('Data info: ', self.data_info)
         

@@ -1,6 +1,7 @@
 FROM tensorflow/tensorflow:latest-gpu
-ARG model
+WORKDIR /ids
 COPY . .
 RUN pip install -r requirements.txt
-ENTRYPOINT ["./train_model.sh"]
+RUN mkdir Data
+#ENTRYPOINT ["bash train_model.sh"]
 
