@@ -18,7 +18,7 @@ gpus= tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(gpus[0], True)
 
 class Model:
-    def __init__(self, model='AAE', data_dir='./Data/', unknown_attack=None, input_dim=29*29, z_dim=10, batch_size=100, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
+    def __init__(self, model='AAE', data_dir='./Data/', unknown_attack=None, input_dim=29*29, z_dim=10, batch_size=64, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
         self.is_build = False
         self.unknown_attack = unknown_attack
         self.data_dir = data_dir
@@ -34,7 +34,7 @@ class Model:
         self.reconstruction_lr = reconstruction_lr
         self.regularization_lr = regularization_lr
         self.beta1_sup=0.9
-        self.beta1 = 0.5
+        self.beta1 = 0.9
         self.beta2 = 0.9
         self.num_critic = 5
         self.n_labels = 2
@@ -149,14 +149,14 @@ class Model:
         dc_g_var = [var for var in all_variables if 'dc_g_' in var.name]
         dc_c_var = [var for var in all_variables if 'dc_c_' in var.name]
         self.discriminator_g_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate,
-                                                               beta1=self.beta1, beta2=self.beta2).minimize(self.dc_g_loss, var_list=dc_g_var)
+                                                               beta1=self.beta1).minimize(self.dc_g_loss, var_list=dc_g_var) #remove beta 2
         self.discriminator_c_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate,
-                                                               beta1=self.beta1, beta2=self.beta2).minimize(self.dc_c_loss, var_list=dc_c_var)
+                                                               beta1=self.beta1).minimize(self.dc_c_loss, var_list=dc_c_var) #remove beta 2
         # Generator loss
         self.generator_loss = -tf.reduce_mean(d_g_fake)-tf.reduce_mean(d_c_fake)
 
         en_var = [var for var in all_variables if 'e_' in var.name]
-        self.generator_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(self.generator_loss, var_list=en_var)
+        self.generator_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1).minimize(self.generator_loss, var_list=en_var) # remove beta2
         
         # Semi-Supervised Classification Phase
         # Train encoder with a small amount of label samples
@@ -169,7 +169,7 @@ class Model:
         self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
         self.supervised_encoder_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y_input, logits=self.encoder_output_label_))
-        self.supervised_encoder_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1_sup).minimize(self.supervised_encoder_loss, var_list=en_var)
+        self.supervised_encoder_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1).minimize(self.supervised_encoder_loss, var_list=en_var) # replace beta1_sup by beta1
 
         
 
