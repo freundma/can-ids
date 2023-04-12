@@ -16,8 +16,9 @@ gpus= tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(gpus[0], True)
 
 class Model:
-    def __init__(self, model='AAE', data_dir='./Data/', unknown_attack=None, input_dim=29*29, z_dim=10, batch_size=100, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
+    def __init__(self, dataset, model='AAE', data_dir='./Data/', unknown_attack=None,input_dim=29*29, z_dim=10, batch_size=100, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
         self.is_build = False
+        self.dataset = dataset
         self.unknown_attack = unknown_attack
         self.data_dir = data_dir
         self.read_datainfo()
@@ -53,6 +54,69 @@ class Model:
         "test": 0
         }
         self.labels = ['DoS', 'Fuzzy', 'gear', 'RPM', 'Normal']
+        if (self.dataset == 'road/with_masquerade'):
+            self.labels = ['correlated_signal_attack_1_masquerade',
+                        'correlated_signal_attack_1',
+                        'correlated_signal_attack_2_masquerade',
+                        'correlated_signal_attack_2',
+                        'correlated_signal_attack_3_masquerade',
+                        'correlated_signal_attack_3',
+                        'fuzzing_attack_1',
+                        'fuzzing_attack_2',
+                        'fuzzing_attack_3',
+                        'max_engine_coolant_temp_attack_masquerade',
+                        'max_speedometer_attack_1',
+                        'max_speedometer_attack_2_masquerade',
+                        'max_speedometer_attack_2',
+                        'max_speedometer_attack_3_masquerade',
+                        'max_speedometer_attack_3',
+                        'reverse_light_off_attack_1_masquerade',
+                        'reverse_light_off_attack_1',
+                        'reverse_light_off_attack_2_masquerade',
+                        'reverse_light_off_attack_2',
+                        'reverse_light_off_attack_3_masquerade',
+                        'reverse_light_off_attack_3',
+                        'reverse_light_on_attack_1_masquerade',
+                        'reverse_light_on_attack_1',
+                        'reverse_light_on_attack_2_masquerade',
+                        'reverse_light_on_attack_2',
+                        'reverse_light_on_attack_3_masquerade',
+                        'reverse_light_on_attack_3',
+                        'Normal'
+                        ]
+        if (self.dataset == 'road/without_masquerade'):
+            self.labels = ['correlated_signal_attack_1',
+                        'correlated_signal_attack_2',
+                        'correlated_signal_attack_3',
+                        'fuzzing_attack_1',
+                        'fuzzing_attack_2',
+                        'fuzzing_attack_3',
+                        'max_speedometer_attack_1',
+                        'max_speedometer_attack_2',
+                        'max_speedometer_attack_3',
+                        'reverse_light_off_attack_1',
+                        'reverse_light_off_attack_2',
+                        'reverse_light_off_attack_3',
+                        'reverse_light_on_attack_1',
+                        'reverse_light_on_attack_2',
+                        'reverse_light_on_attack_3',
+                        'Normal'
+                        ]
+        if (self.dataset == 'road/just_masquerade'):
+            self.labels = ['correlated_signal_attack_1_masquerade',
+                        'correlated_signal_attack_2_masquerade',
+                        'correlated_signal_attack_3_masquerade',
+                        'max_engine_coolant_temp_attack_masquerade',
+                        'max_speedometer_attack_2_masquerade',
+                        'max_speedometer_attack_3_masquerade',
+                        'reverse_light_off_attack_1_masquerade',
+                        'reverse_light_off_attack_2_masquerade',
+                        'reverse_light_off_attack_3_masquerade',
+                        'reverse_light_on_attack_1_masquerade',
+                        'reverse_light_on_attack_2_masquerade',
+                        'reverse_light_on_attack_3_masquerade',
+                        'Normal'
+                        ]
         for f in ['{}/{}/datainfo.txt'.format(self.data_dir, l) for l in self.labels if l != self.unknown_attack]:
             data_read = json.load(open(f))
             for key in self.data_info.keys():
@@ -62,7 +126,7 @@ class Model:
         if self.unknown_attack != None:
             self.results_path = './Results/unknown/{}'.format(self.unknown_attack)
         else:
-            self.results_path = './Data/hcrl/Results/{}/'.format(self.attack)
+            self.results_path = 'Data/{}/Results/{}'.format(self.dataset, self.attack)
         print('Unknown attack: {}'.format(self.unknown_attack if self.unknown_attack!='' else 'None'))
         print('Data info: ', self.data_info)
         
@@ -408,9 +472,10 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--is_train', action='store_true')
+    parser.add_argument('--dataset', type=str, default='hcrl')
     args = parser.parse_args()
     
-    model = Model(model=args.model, data_dir=args.data_dir, unknown_attack = args.unknown_attack, batch_size=args.batch_size, n_epochs=args.epochs)
+    model = Model(args.dataset, model=args.model, data_dir=args.data_dir, unknown_attack = args.unknown_attack, batch_size=args.batch_size, n_epochs=args.epochs)
     if args.is_train:
         model.train()
     else:

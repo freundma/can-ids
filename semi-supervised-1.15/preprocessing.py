@@ -118,11 +118,17 @@ def write_tfrecord(data, filename):
     tfrecord_writer.close()    
 
 def main(indir, outdir, attacks):
+    total_normal = 0
+    total_attack = 0
     data_info = {}
     for attack in attacks:
         print('Attack: {} ==============='.format(attack))
-        finput = '{}/{}_dataset.csv'.format(indir, attack)
-        df = preprocess(finput)
+        if (len(attacks) > 4):
+            finput = '{}/{}.csv'.format(indir, attack)
+            df, total_normal, total_attack = preprocess_altformat(finput, total_normal, total_attack)
+        else:
+            finput = '{}/{}_dataset.csv'.format(indir, attack)
+            df, total_normal, total_attack = preprocess(finput, total_normal, total_attack)
         print("Writing...................")
         foutput_attack = '{}/{}'.format(outdir, attack)
         foutput_normal = '{}/Normal_{}'.format(outdir, attack)
@@ -149,7 +155,7 @@ if __name__ == '__main__':
     elif (args.attack_type == 'tu'):
         attack_types = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay']
     elif (args.attack_type == 'road_without_masquerade'):
-        attacks_types = ['correlated_signal_attack_1',
+        attack_types = ['correlated_signal_attack_1',
                         'correlated_signal_attack_2',
                         'correlated_signal_attack_3',
                         'fuzzing_attack_1',

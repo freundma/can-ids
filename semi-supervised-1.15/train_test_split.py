@@ -149,7 +149,24 @@ if __name__ == '__main__':
 
     if args.attack_type == 'hcrl':
         attack_types = ['DoS', 'Fuzzy', 'gear', 'RPM']
-    elif args.attack_type == 'road':
+    elif (args.attack_type == 'road_without_masquerade'):
+        attack_types = ['correlated_signal_attack_1',
+                        'correlated_signal_attack_2',
+                        'correlated_signal_attack_3',
+                        'fuzzing_attack_1',
+                        'fuzzing_attack_2',
+                        'fuzzing_attack_3',
+                        'max_speedometer_attack_1',
+                        'max_speedometer_attack_2',
+                        'max_speedometer_attack_3',
+                        'reverse_light_off_attack_1',
+                        'reverse_light_off_attack_2',
+                        'reverse_light_off_attack_3',
+                        'reverse_light_on_attack_1',
+                        'reverse_light_on_attack_2',
+                        'reverse_light_on_attack_3'
+                        ]
+    elif (args.attack_type == 'road_with_masquerade'):
         attack_types = ['correlated_signal_attack_1_masquerade',
                         'correlated_signal_attack_1',
                         'correlated_signal_attack_2_masquerade',
@@ -159,8 +176,9 @@ if __name__ == '__main__':
                         'fuzzing_attack_1',
                         'fuzzing_attack_2',
                         'fuzzing_attack_3',
-                        'reverse_light_off_attack_1_masquerade',
+                        'max_engine_coolant_temp_attack_masquerade',
                         'max_speedometer_attack_1',
+                        'max_speedometer_attack_1_masquerade',
                         'max_speedometer_attack_2_masquerade',
                         'max_speedometer_attack_2',
                         'max_speedometer_attack_3_masquerade',
@@ -177,6 +195,21 @@ if __name__ == '__main__':
                         'reverse_light_on_attack_2',
                         'reverse_light_on_attack_3_masquerade',
                         'reverse_light_on_attack_3'
+                        ]
+    elif (args.attack_type == 'road_just_masquerade'):
+        attack_types = ['correlated_signal_attack_1_masquerade',
+                        'correlated_signal_attack_2_masquerade',
+                        'correlated_signal_attack_3_masquerade',
+                        'max_engine_coolant_temp_attack_masquerade',
+                        'max_speedometer_attack_1_masquerade',
+                        'max_speedometer_attack_2_masquerade',
+                        'max_speedometer_attack_3_masquerade',
+                        'reverse_light_off_attack_1_masquerade',
+                        'reverse_light_off_attack_2_masquerade',
+                        'reverse_light_off_attack_3_masquerade',
+                        'reverse_light_on_attack_1_masquerade',
+                        'reverse_light_on_attack_2_masquerade',
+                        'reverse_light_on_attack_3_masquerade',
                         ]
     elif args.attack_type == None:
         attack_types = None
