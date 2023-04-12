@@ -1,5 +1,4 @@
 import tensorflow as tf
-tf.compat.v1.disable_eager_execution()
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
@@ -13,12 +12,11 @@ import timeit
 from AAE import AAE
 from CAAE import CAAE
 import argparse
-
 gpus= tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(gpus[0], True)
 
 class Model:
-    def __init__(self, model='AAE', data_dir='./Data/', unknown_attack=None, input_dim=29*29, z_dim=10, batch_size=64, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
+    def __init__(self, model='AAE', data_dir='./Data/', unknown_attack=None, input_dim=29*29, z_dim=10, batch_size=100, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
         self.is_build = False
         self.unknown_attack = unknown_attack
         self.data_dir = data_dir
@@ -34,7 +32,7 @@ class Model:
         self.reconstruction_lr = reconstruction_lr
         self.regularization_lr = regularization_lr
         self.beta1_sup=0.9
-        self.beta1 = 0.9
+        self.beta1 = 0.5
         self.beta2 = 0.9
         self.num_critic = 5
         self.n_labels = 2
@@ -95,45 +93,45 @@ class Model:
         alpha = tf.random.uniform(shape=[self.batch_size, 1], minval=0., maxval=1.)
         differences = g_samples - real_samples
         interpolates = real_samples + (alpha * differences)
-        print('Variable scope Gradient: ', tf.compat.v1.get_variable_scope())
-        with (tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope())):
+        print('Variable scope Gradient: ', tf.get_variable_scope())
+        with (tf.variable_scope(tf.get_variable_scope())):
             gradients = tf.gradients(discriminator(interpolates, reuse=True), [interpolates])[0]
-        slopes = tf.sqrt(1e-8 + tf.compat.v1.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+        slopes = tf.sqrt(1e-8 + tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
         gradient_penalty = tf.reduce_mean((slopes-1.)**2) 
         return gradient_penalty
     
     def build(self):
         #Define place holder
         self.is_build = True
-        self.x_input = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.input_dim], name='Input')
-        self.x_input_l = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.input_dim], name='Labeled_Input')
-        self.y_input = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.n_labels], name='Labels')
-        self.x_target = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.input_dim], name='Target')
-        self.real_distribution = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.z_dim], name='Real_distribution')
-        self.categorial_distribution = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.n_labels],
+        self.x_input = tf.placeholder(dtype=tf.float32, shape=[None, self.input_dim], name='Input')
+        self.x_input_l = tf.placeholder(dtype=tf.float32, shape=[None, self.input_dim], name='Labeled_Input')
+        self.y_input = tf.placeholder(dtype=tf.float32, shape=[None, self.n_labels], name='Labels')
+        self.x_target = tf.placeholder(dtype=tf.float32, shape=[None, self.input_dim], name='Target')
+        self.real_distribution = tf.placeholder(dtype=tf.float32, shape=[None, self.z_dim], name='Real_distribution')
+        self.categorial_distribution = tf.placeholder(dtype=tf.float32, shape=[None, self.n_labels],
                                                  name='Categorical_distribution')
-        self.manual_decoder_input = tf.compat.v1.placeholder(dtype=tf.float32, shape=[1, self.z_dim + self.n_labels], name='Decoder_input')
-        self.learning_rate = tf.compat.v1.placeholder(tf.float32, shape=[], name='learning_rate')
-        self.keep_prob = tf.compat.v1.placeholder(tf.float32, shape=[], name='keep_prob')
+        self.manual_decoder_input = tf.placeholder(dtype=tf.float32, shape=[1, self.z_dim + self.n_labels], name='Decoder_input')
+        self.learning_rate = tf.placeholder(tf.float32, shape=[], name='learning_rate')
+        self.keep_prob = tf.placeholder(tf.float32, shape=[], name='keep_prob')
         # Reconstruction Phase
         # Encoder try to predict both label and latent space of the input, which will be feed into Decoder to reconstruct the input
         # The process is optimized by autoencoder_loss which is the MSE of the decoder_output and the orginal input
-        with (tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope())):
+        with (tf.variable_scope(tf.get_variable_scope())):
             self.encoder_output_label, self.encoder_output_latent = self.model.encoder(self.x_input, self.keep_prob)
             decoder_input = tf.concat([self.encoder_output_label, self.encoder_output_latent], 1)
             decoder_output = self.model.decoder(decoder_input)
 
         self.autoencoder_loss = tf.reduce_mean(tf.square(self.x_target - decoder_output))
-        self.autoencoder_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1).minimize(self.autoencoder_loss)
+        self.autoencoder_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1).minimize(self.autoencoder_loss)
         # Regularization Phase
         # Train both 2 discriminator of gaussian and categorical to detect the output from encoder
-        print('Variable scope: ', tf.compat.v1.get_variable_scope())
-        with (tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope())):
+        print('Variable scope: ', tf.get_variable_scope())
+        with (tf.variable_scope(tf.get_variable_scope())):
             # Discriminator for gaussian
             d_g_real = self.model.discriminator_gauss(self.real_distribution)
             d_g_fake = self.model.discriminator_gauss(self.encoder_output_latent, reuse=True)
         # Need to seperate dicriminator of gaussian and categorical
-        with (tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope())):
+        with (tf.variable_scope(tf.get_variable_scope())):
             # Discrimnator for categorical
             d_c_real = self.model.discriminator_categorical(self.categorial_distribution)
             d_c_fake = self.model.discriminator_categorical(self.encoder_output_label, reuse=True)
@@ -145,22 +143,22 @@ class Model:
         self.dc_c_loss = -tf.reduce_mean(d_c_real) + tf.reduce_mean(d_c_fake) \
                         + 10.0 * self.gradient_penalty(self.categorial_distribution, self.encoder_output_label, self.model.discriminator_categorical)
 
-        all_variables = tf.compat.v1.trainable_variables()
+        all_variables = tf.trainable_variables()
         dc_g_var = [var for var in all_variables if 'dc_g_' in var.name]
         dc_c_var = [var for var in all_variables if 'dc_c_' in var.name]
-        self.discriminator_g_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate,
-                                                               beta1=self.beta1).minimize(self.dc_g_loss, var_list=dc_g_var) #remove beta 2
-        self.discriminator_c_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate,
-                                                               beta1=self.beta1).minimize(self.dc_c_loss, var_list=dc_c_var) #remove beta 2
+        self.discriminator_g_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate,
+                                                               beta1=self.beta1, beta2=self.beta2).minimize(self.dc_g_loss, var_list=dc_g_var)
+        self.discriminator_c_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate,
+                                                               beta1=self.beta1, beta2=self.beta2).minimize(self.dc_c_loss, var_list=dc_c_var)
         # Generator loss
         self.generator_loss = -tf.reduce_mean(d_g_fake)-tf.reduce_mean(d_c_fake)
 
         en_var = [var for var in all_variables if 'e_' in var.name]
-        self.generator_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1).minimize(self.generator_loss, var_list=en_var) # remove beta2
+        self.generator_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1, beta2=self.beta2).minimize(self.generator_loss, var_list=en_var)
         
         # Semi-Supervised Classification Phase
         # Train encoder with a small amount of label samples
-        with tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope()):
+        with tf.variable_scope(tf.get_variable_scope()):
             self.encoder_output_label_, self.encoder_output_latent_ = self.model.encoder(self.x_input_l, self.keep_prob, reuse=True, supervised=True)
 
         # Classification accuracy of encoder
@@ -169,7 +167,7 @@ class Model:
         self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
         self.supervised_encoder_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y_input, logits=self.encoder_output_label_))
-        self.supervised_encoder_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1).minimize(self.supervised_encoder_loss, var_list=en_var) # replace beta1_sup by beta1
+        self.supervised_encoder_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1_sup).minimize(self.supervised_encoder_loss, var_list=en_var)
 
         
 
@@ -200,23 +198,23 @@ class Model:
         train_unlabel, train_label, validation = self.construct_data_flow()
         if not self.is_build:
             self.build()
-        all_variables = tf.compat.v1.trainable_variables()
-        init = tf.compat.v1.global_variables_initializer()
+        all_variables = tf.trainable_variables()
+        init = tf.global_variables_initializer()
         # Tensorboard visualization
-        tf.compat.v1.summary.scalar(name='Autoencoder Loss', tensor=self.autoencoder_loss)
-        tf.compat.v1.summary.scalar(name='Discriminator gauss Loss', tensor=self.dc_g_loss)
-        tf.compat.v1.summary.scalar(name='Discriminator categorical Loss', tensor=self.dc_c_loss)
-        tf.compat.v1.summary.scalar(name='Generator Loss', tensor=self.generator_loss)
-        tf.compat.v1.summary.scalar(name='Supervised Encoder Loss', tensor=self.supervised_encoder_loss)
-        tf.compat.v1.summary.scalar(name='Supervised Encoder Accuracy', tensor=self.accuracy)
-        tf.compat.v1.summary.histogram(name='Encoder Gauss Distribution', values=self.encoder_output_latent)
-        tf.compat.v1.summary.histogram(name='Real Gauss Distribution', values=self.real_distribution)
-        tf.compat.v1.summary.histogram(name='Encoder Categorical Distribution', values=self.encoder_output_label)
-        tf.compat.v1.summary.histogram(name='Real Categorical Distribution', values=self.categorial_distribution)
-        self.summary_op = tf.compat.v1.summary.merge_all()
+        tf.summary.scalar(name='Autoencoder Loss', tensor=self.autoencoder_loss)
+        tf.summary.scalar(name='Discriminator gauss Loss', tensor=self.dc_g_loss)
+        tf.summary.scalar(name='Discriminator categorical Loss', tensor=self.dc_c_loss)
+        tf.summary.scalar(name='Generator Loss', tensor=self.generator_loss)
+        tf.summary.scalar(name='Supervised Encoder Loss', tensor=self.supervised_encoder_loss)
+        tf.summary.scalar(name='Supervised Encoder Accuracy', tensor=self.accuracy)
+        tf.summary.histogram(name='Encoder Gauss Distribution', values=self.encoder_output_latent)
+        tf.summary.histogram(name='Real Gauss Distribution', values=self.real_distribution)
+        tf.summary.histogram(name='Encoder Categorical Distribution', values=self.encoder_output_label)
+        tf.summary.histogram(name='Real Categorical Distribution', values=self.categorial_distribution)
+        self.summary_op = tf.summary.merge_all()
         accuracies = []
         # Saving the model
-        saver = tf.compat.v1.train.Saver()
+        saver = tf.train.Saver()
         step = 0
         # Early stopping
         best_sess = None
@@ -233,10 +231,10 @@ class Model:
             'known': [],
             'unknown': []
         }
-        with tf.compat.v1.Session() as sess:
+        with tf.Session() as sess:
             tensorboard_path, saved_model_path, log_path = form_results(self.model_name, self.results_path, self.z_dim, self.supervised_lr, self.batch_size, self.n_epochs, self.beta1)
             sess.run(init)
-            writer = tf.compat.v1.summary.FileWriter(logdir=tensorboard_path, graph=sess.graph)
+            writer = tf.summary.FileWriter(logdir=tensorboard_path, graph=sess.graph)
             for epoch in range(self.n_epochs):
                 if epoch == 50:
                     self.supervised_lr /= 10
@@ -330,8 +328,8 @@ class Model:
     def test(self, results_path, unknown_test):
         if not self.is_build:
             self.build()
-        init = tf.compat.v1.global_variables_initializer()
-        saver = tf.compat.v1.train.Saver()
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
         if unknown_test:
             data_path = ['{}/{}/'.format(self.data_dir, a) for a in [self.unknown_attack, 'Normal']]
             test_size = 0
@@ -343,7 +341,9 @@ class Model:
             data_path = ['{}/{}/'.format(self.data_dir, a) for a in self.labels if a != self.unknown_attack]
         # results_path = './Results/all/CNN_2021-07-21 19:53:22.883136_10_0.0001_64_300_0.9_Semi_Supervised/'
         print('Test data: ', data_path)
-        with tf.compat.v1.Session() as sess:
+        with tf.Session() as sess:
+            print("Restoring saved model from: {}".format(results_path + 'Saved_models'))
+
             saver.restore(sess, save_path=tf.train.latest_checkpoint(results_path + '/Saved_models'))
             test = data_from_tfrecord(tf_filepath=[p + 'test' for p in data_path], batch_size=self.batch_size, repeat_time=1, shuffle=False)
             num_batches = int(test_size / self.batch_size)
@@ -379,13 +379,13 @@ class Model:
     
     def timing(self, x, model_path, num_loop= 100, use_gpu=False):
         if use_gpu:
-            sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(device_count={'GPU': 1}))
+            sess = tf.Session(config=tf.ConfigProto(device_count={'GPU': 1}))
         else:
-            sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(device_count={'GPU': 0}))
+            sess = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
         if not self.is_build:
             self.build()
-        init = tf.compat.v1.global_variables_initializer()
-        saver = tf.compat.v1.train.Saver()
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
         saver.restore(sess, save_path=tf.train.latest_checkpoint(model_path))
         # For warm-up
         y_pred = sess.run([self.output_label], feed_dict={self.x_input_l: x, self.keep_prob: 1.0})
@@ -418,4 +418,5 @@ if __name__ == '__main__':
             print("Must define res_path which store model's weights")
         else:
             model.test(args.res_path, unknown_test=False)
-            model.test(args.res_path, unknown_test=True)
+            if (args.unknown_attack):
+                model.test(args.res_path, unknown_test=True)
