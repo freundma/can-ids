@@ -53,6 +53,7 @@ def preprocess(file_name):
     }, index= range(len(feature)))
 
     df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
+    df.to_csv('preprocessing.csv', index=False)
     print('Preprocessing: DONE')
     print('#Normal: ', df[df['label'] == 0].shape[0])
     print('#Attack: ', df[df['label'] == 1].shape[0])
@@ -90,6 +91,7 @@ def preprocess_altformat(file_name, total_normal, total_attack):
         'label': pd.Series(label.tolist())
     }, index= range(len(feature)))
     df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
+    df.to_csv('preprocessing.csv', index=False)
     print('Preprocessing: DONE')
     print('#Normal: ', df[df['label'] == 0].shape[0])
     total_normal = total_normal + df[df['label'] == 0].shape[0]
