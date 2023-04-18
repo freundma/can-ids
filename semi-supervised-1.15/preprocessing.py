@@ -155,7 +155,8 @@ if __name__ == '__main__':
     elif (args.attack_type == 'tu'):
         attack_types = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay']
     elif (args.attack_type == 'road_without_masquerade'):
-        attack_types = ['correlated_signal_attack_1',
+        attack_types = ['ambient_dyno_drive_basic_long', # some ambient data to fill up the normal data gap
+                        'correlated_signal_attack_1',
                         'correlated_signal_attack_2',
                         'correlated_signal_attack_3',
                         'fuzzing_attack_1',
@@ -172,7 +173,8 @@ if __name__ == '__main__':
                         'reverse_light_on_attack_3'
                         ]
     elif (args.attack_type == 'road_with_masquerade'):
-        attack_types = ['correlated_signal_attack_1_masquerade',
+        attack_types = ['ambient_dyno_drive_basic_long', # some ambient data to fill up the normal data gap
+                        'correlated_signal_attack_1_masquerade',
                         'correlated_signal_attack_1',
                         'correlated_signal_attack_2_masquerade',
                         'correlated_signal_attack_2',
@@ -182,6 +184,7 @@ if __name__ == '__main__':
                         'fuzzing_attack_2',
                         'fuzzing_attack_3',
                         'max_engine_coolant_temp_attack_masquerade',
+                        'max_speedometer_attack_1_masquerade',
                         'max_speedometer_attack_1',
                         'max_speedometer_attack_2_masquerade',
                         'max_speedometer_attack_2',
@@ -201,10 +204,12 @@ if __name__ == '__main__':
                         'reverse_light_on_attack_3'
                         ]
     elif (args.attack_type == 'road_just_masquerade'):
-        attack_types = ['correlated_signal_attack_1_masquerade',
+        attack_types = ['ambient_dyno_drive_basic_long', # some ambient data to fill up the normal data gap
+                        'correlated_signal_attack_1_masquerade',
                         'correlated_signal_attack_2_masquerade',
                         'correlated_signal_attack_3_masquerade',
                         'max_engine_coolant_temp_attack_masquerade',
+                        'max_speedometer_attack_1_masquerade',
                         'max_speedometer_attack_2_masquerade',
                         'max_speedometer_attack_3_masquerade',
                         'reverse_light_off_attack_1_masquerade',

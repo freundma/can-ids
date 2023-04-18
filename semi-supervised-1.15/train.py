@@ -54,6 +54,8 @@ class Model:
         "test": 0
         }
         self.labels = ['DoS', 'Fuzzy', 'gear', 'RPM', 'Normal']
+        if (self.dataset == 'tu-eindhoven/astra'):
+            self.labels = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay','Normal']
         if (self.dataset == 'road/with_masquerade'):
             self.labels = ['correlated_signal_attack_1_masquerade',
                         'correlated_signal_attack_1',
