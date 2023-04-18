@@ -29,8 +29,30 @@ def convert_canid_bits(cid):
         return bits
     except:
         return None
+
+def convert_dez(hex):
+    try:
+        if (str(hex) != str(np.NaN)):
+            return(int(hex, 16))
+        return(0) # replace NaN by 0
+    except:
+        return None
+
+def fill_row_hcrl(sample):
+    number = int(sample['DLC'])
+    if number != 8: # fill up with np.NaN
+        sample['Flag'] = sample['Data' + str(number)]
+        sample['Data' + str(number)] = np.NaN
+
+def payload_sum(sample):
+    sum = 0
+    for i in range(8):
+        sum += sample['data'+i]
+    sample['sum'] = sum
+
+mad = lambda x: x.mad()
     
-def preprocess(file_name):
+def preprocess(file_name, alt_features):
     df = dd.read_csv(file_name, header=None, names=attributes)
     print('Reading from {}: DONE'.format(file_name))
     print('Dask processing: -------------')
@@ -53,13 +75,12 @@ def preprocess(file_name):
     }, index= range(len(feature)))
 
     df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
-    df.to_csv('preprocessing.csv', index=False)
     print('Preprocessing: DONE')
     print('#Normal: ', df[df['label'] == 0].shape[0])
     print('#Attack: ', df[df['label'] == 1].shape[0])
     return df[['features', 'label']].reset_index().drop(['index'], axis=1)
 
-def preprocess_altformat(file_name, total_normal, total_attack):
+def preprocess_altformat(file_name, total_normal, total_attack, alt_features):
     df = dd.read_csv(file_name, dtype={
         'label': bool,
         'timestamp': float, 
@@ -76,27 +97,45 @@ def preprocess_altformat(file_name, total_normal, total_attack):
     print('Reading from {}: DONE'.format(file_name))
     print('Dask processing: -------------')
     pd_df = df.compute()
-    pd_df = pd_df[['label','timestamp','id']].sort_values('timestamp',  ascending=True)
-    pd_df['id'] = pd_df.id.apply(convert_canid_bits)
-    print('Dask processing: DONE')
-    print('Aggregate data -----------------')
-    as_strided = np.lib.stride_tricks.as_strided  
-    win = 29
-    s = 29
-    #Stride is counted by bytes
-    feature = as_strided(pd_df.id, ((len(pd_df) - win) // s + 1, win), (8*s, 8)) 
-    label = as_strided(pd_df.label, ((len(pd_df) - win) // s + 1, win), (1*s, 1))
-    df = pd.DataFrame({
-        'features': pd.Series(feature.tolist()),
-        'label': pd.Series(label.tolist())
-    }, index= range(len(feature)))
-    df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
-    df.to_csv('preprocessing.csv', index=False)
-    print('Preprocessing: DONE')
-    print('#Normal: ', df[df['label'] == 0].shape[0])
-    total_normal = total_normal + df[df['label'] == 0].shape[0]
-    print('#Attack: ', df[df['label'] == 1].shape[0])
-    total_attack = total_attack + df[df['label'] == 1].shape[0]
+    if (alt_features): # use alternative feature extraction
+        print('Using alternative feature extraction------------------')
+        pd_df = pd_df.sort_values('timestamp', ascending=True)
+        pd_df['id'] = pd_df['id'].apply(convert_dez) # convert to decimal values
+        for i in range (8):
+            pd_df['data' + str(i)] = pd_df['data' + str(i)].apply(convert_dez)
+        pd_df = pd_df.apply(payload_sum, axis=1)
+        pd_df['time_d'] = pd_df['timestamp'].diff()
+        #pd_df['time_mean'] = pd_df['timestamp'].rolling(16, center=True).mean()
+        pd_df['time_var'] = pd_df['timestamp'].rolling(16, min_periods=1, center=True).var()
+        pd_df['time_d_mean'] = pd_df['time_d'].rolling(16, min_periods=1, center=True).mean()
+        pd_df['time_d_mad'] = pd_df['time_d'].rolling(16, min_periods=1, center=True).apply(mad)
+        as_strided = np.lib.stride_tricks.as_strided  
+        win = 16
+        s = 16
+        # TODO
+        feature = as_strided(pd_df.id, ((len(pd_df)- win) // s + 1, win), (pd_df.id.itemsize*s, pd_df.id.itemsize))
+        label = as_strided(pd_df.label, ((len(pd_df) - win) // s + 1, win), (1*s, 1)) 
+    else:
+        pd_df = pd_df[['label','timestamp','id']].sort_values('timestamp',  ascending=True)
+        pd_df['id'] = pd_df.id.apply(convert_canid_bits)
+        print('Dask processing: DONE')
+        print('Aggregate data -----------------')
+        as_strided = np.lib.stride_tricks.as_strided  
+        win = 29
+        s = 29
+        #Stride is counted by bytes
+        feature = as_strided(pd_df.id, ((len(pd_df) - win) // s + 1, win), (8*s, 8)) 
+        label = as_strided(pd_df.label, ((len(pd_df) - win) // s + 1, win), (1*s, 1))
+        df = pd.DataFrame({
+            'features': pd.Series(feature.tolist()),
+            'label': pd.Series(label.tolist())
+        }, index= range(len(feature)))
+        df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
+        print('Preprocessing: DONE')
+        print('#Normal: ', df[df['label'] == 0].shape[0])
+        total_normal = total_normal + df[df['label'] == 0].shape[0]
+        print('#Attack: ', df[df['label'] == 1].shape[0])
+        total_attack = total_attack + df[df['label'] == 1].shape[0]
     return df[['features', 'label']].reset_index().drop(['index'], axis=1), total_normal, total_attack
 
 def serialize_example(x, y):
@@ -119,7 +158,7 @@ def write_tfrecord(data, filename):
         tfrecord_writer.write(serialize_example(row['features'], row['label']))
     tfrecord_writer.close()    
 
-def main(indir, outdir, attacks):
+def main(indir, outdir, attacks, alt_features):
     total_normal = 0
     total_attack = 0
     data_info = {}
@@ -127,10 +166,10 @@ def main(indir, outdir, attacks):
         print('Attack: {} ==============='.format(attack))
         if (len(attacks) > 4):
             finput = '{}/{}.csv'.format(indir, attack)
-            df, total_normal, total_attack = preprocess_altformat(finput, total_normal, total_attack)
+            df, total_normal, total_attack = preprocess_altformat(finput, total_normal, total_attack, alt_features)
         else:
-            finput = '{}/{}_dataset.csv'.format(indir, attack)
-            df, total_normal, total_attack = preprocess(finput, total_normal, total_attack)
+            finput = '{}/{}_dataset.csv'.format(indir, attack, alt_features)
+            df = preprocess(finput)
         print("Writing...................")
         foutput_attack = '{}/{}'.format(outdir, attack)
         foutput_normal = '{}/Normal_{}'.format(outdir, attack)
@@ -150,6 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--indir', type=str, default="./Data/Car-Hacking")
     parser.add_argument('--outdir', type=str, default="./Data/TFRecord/")
     parser.add_argument('--attack_type', type=str, default='hcrl')
+    parser.add_argument('--alt_features', action='store_true')
     args = parser.parse_args()
     
     if args.attack_type == 'hcrl':
@@ -224,4 +264,4 @@ if __name__ == '__main__':
     else:
         attack_types = [args.attack_type]
 
-    main(args.indir, args.outdir, attack_types)
+    main(args.indir, args.outdir, attack_types, args.alt_features)
