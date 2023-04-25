@@ -152,7 +152,7 @@ if __name__ == '__main__':
     elif (args.attack_type == 'tu'):
         attack_types = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay']
     elif (args.attack_type == 'road_without_masquerade'):
-        attack_types = ['ambient_dyno_drive_basic_long',
+        attack_types = ['ambient_street_driving_long',
                         'correlated_signal_attack_1',
                         'correlated_signal_attack_2',
                         'correlated_signal_attack_3',
@@ -170,7 +170,7 @@ if __name__ == '__main__':
                         'reverse_light_on_attack_3'
                         ]
     elif (args.attack_type == 'road_with_masquerade'):
-        attack_types = ['ambient_dyno_drive_basic_long',
+        attack_types = ['ambient_street_driving_long',
                         'correlated_signal_attack_1_masquerade',
                         'correlated_signal_attack_1',
                         'correlated_signal_attack_2_masquerade',
