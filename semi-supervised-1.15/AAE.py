@@ -31,7 +31,7 @@ class AAE:
             out = tf.add(tf.matmul(x, weights), bias, name='matmul')
             return out
 
-    def encoder(self, x, reuse=False, supervised=False):
+    def encoder(self, x, reuse=False, supervised=False, alt_features='original'):
         """
         Encode part of the autoencoder.
         :param x: input to the autoencoder
@@ -53,7 +53,7 @@ class AAE:
                 softmax_label = cat_op
             return softmax_label, latent_variable
 
-    def decoder(self, x, reuse=False):
+    def decoder(self, x, reuse=False, alt_features='original'):
         """
         Decoder part of the autoencoder.
         :param x: input to the decoder

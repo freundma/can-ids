@@ -69,12 +69,13 @@ def fill_row_hcrl(sample):
 def payload_sum(sample):
     sum = 0
     for i in range(8):
-        sum += sample['data'+i]
+        sum += sample['data'+str(i)]
     sample['sum'] = sum
+    return sample
 
 mad = lambda x: x.mad()
     
-def preprocess(file_name, alt_features):
+def preprocess(file_name):
     df = dd.read_csv(file_name, header=None, names=attributes)
     print('Reading from {}: DONE'.format(file_name))
     print('Dask processing: -------------')
@@ -119,15 +120,17 @@ def preprocess_altformat(file_name, total_normal, total_attack, alt_features):
     print('Reading from {}: DONE'.format(file_name))
     print('Dask processing: -------------')
     pd_df = df.compute()
-    if (alt_features == 'simple'):
+    if (alt_features == 'simple'): # use alternative simple feature extraction
         print('Using alternative simple feature extraction------------------')
-        pd_df = pd_df.sort_values('timestamp', ascending=True)
+        #pd_df = pd_df.sort_values('timestamp', ascending=True)
         pd_df = pd_df.drop('timestamp', axis=1)
         pd_df['id'] = pd_df['id'].apply(convert_dez) # convert to decimal values
+        pd_df['sum'] = 0
         for i in range (8):
             pd_df['data' + str(i)] = pd_df['data' + str(i)].apply(convert_dez)
-        pd_df[['id','dlc','data0','data1','data2','data3','data4','data5','data6','data7']] = min_max_scaling(pd_df[['id','dlc','data0','data1','data2','data3','data4','data5','data6','data7']])
-        pd_df['features'] = pd_df[['id','dlc','data0','data1','data2','data3','data4','data5','data6','data7']].values.tolist()
+            pd_df['sum'] = pd_df['sum'] + pd_df['data' + str(i)]
+        pd_df[['id','dlc','data0','data1','data2','data3','data4','data5','data6','data7','sum']] = min_max_scaling(pd_df[['id','dlc','data0','data1','data2','data3','data4','data5','data6','data7','sum']])
+        pd_df['features'] = pd_df[['id','dlc','data0','data1','data2','data3','data4','data5','data6','data7','sum']].values.tolist()
         as_strided = np.lib.stride_tricks.as_strided
         win = 32 # window
         s = 32 # step
@@ -138,21 +141,32 @@ def preprocess_altformat(file_name, total_normal, total_attack, alt_features):
             'label': pd.Series(label.tolist())
         }, index= range(len(feature)))
         df['label'] = df['label'].apply(lambda x: 1 if any(x) else 0)
-        df.to_csv('new_simple_feature_extraction.csv', index=False)
-        exit(0)
-        return None
+        df_concat = df.loc[df['label'] == 1]
+        for i in range (5):
+            df = pd.concat([df, df_concat])
+        print('Preprocessing: DONE')
+        print('#Normal: ', df[df['label'] == 0].shape[0])
+        total_normal = total_normal + df[df['label'] == 0].shape[0]
+        print('#Attack: ', df[df['label'] == 1].shape[0])
+        total_attack = total_attack + df[df['label'] == 1].shape[0]
+        return df[['features', 'label']].reset_index().drop(['index'], axis=1), total_normal, total_attack
     elif (alt_features == 'complex'): # use alternative feature extraction
         print('Using alternative complex feature extraction------------------')
         pd_df = pd_df.sort_values('timestamp', ascending=True)
         pd_df['id'] = pd_df['id'].apply(convert_dez) # convert to decimal values
+        pd_df['sum'] = 0
+        pd_df['timestamp'] = pd_df['timestamp'] * 10000000
         for i in range (8):
             pd_df['data' + str(i)] = pd_df['data' + str(i)].apply(convert_dez)
-        pd_df = pd_df.apply(payload_sum, axis=1)
+            pd_df['sum'] = pd_df['sum'] + pd_df['data' + str(i)]
+        pd_df.to_csv('complex_feature_extraction_sum.csv', index=False)
         pd_df['time_d'] = pd_df['timestamp'].diff()
         #pd_df['time_mean'] = pd_df['timestamp'].rolling(16, center=True).mean()
         pd_df['time_var'] = pd_df['timestamp'].rolling(16, min_periods=1, center=True).var()
         pd_df['time_d_mean'] = pd_df['time_d'].rolling(16, min_periods=1, center=True).mean()
         pd_df['time_d_mad'] = pd_df['time_d'].rolling(16, min_periods=1, center=True).apply(mad)
+        pd_df.to_csv('complex_feature_extraction_sum.csv', index=False)
+        exit(0)
         as_strided = np.lib.stride_tricks.as_strided  
         win = 16
         s = 16
@@ -183,33 +197,43 @@ def preprocess_altformat(file_name, total_normal, total_attack, alt_features):
         total_attack = total_attack + df[df['label'] == 1].shape[0]
         return df[['features', 'label']].reset_index().drop(['index'], axis=1), total_normal, total_attack
 
-def serialize_example(x, y):
+def serialize_example(x, y, alt_features):
     """converts x, y to tf.train.Example and serialize"""
     #Need to pay attention to whether it needs to be converted to numpy() form
-    input_features = tf.train.Int64List(value = np.array(x).flatten())
-    label = tf.train.Int64List(value = np.array([y]))
-    features = tf.train.Features(
-        feature = {
-            "input_features": tf.train.Feature(int64_list = input_features),
-            "label" : tf.train.Feature(int64_list = label)
-        }
-    )
+    if (alt_features == 'original'):
+        input_features = tf.train.Int64List(value = np.array(x).flatten())
+        label = tf.train.Int64List(value = np.array([y]))
+        features = tf.train.Features(
+            feature = {
+                "input_features": tf.train.Feature(int64_list = input_features),
+                "label" : tf.train.Feature(int64_list = label)
+            }
+        )
+    else:
+        input_features = tf.train.FloatList(value = np.array(x).flatten())
+        label = tf.train.Int64List(value = np.array([y]))
+        features = tf.train.Features(
+            feature = {
+                "input_features": tf.train.Feature(float_list = input_features),
+                "label" : tf.train.Feature(int64_list = label)
+            }
+        )
     example = tf.train.Example(features = features)
     return example.SerializeToString()
 
-def write_tfrecord(data, filename):
+def write_tfrecord(data, filename, alt_features):
     tfrecord_writer = tf.io.TFRecordWriter(filename)
     for _, row in tqdm(data.iterrows()):
-        tfrecord_writer.write(serialize_example(row['features'], row['label']))
+        tfrecord_writer.write(serialize_example(row['features'], row['label'], alt_features))
     tfrecord_writer.close()    
 
-def main(indir, outdir, attacks, alt_features):
+def main(indir, outdir, attacks, alt_features, dataset):
     total_normal = 0
     total_attack = 0
     data_info = {}
     for attack in attacks:
         print('Attack: {} ==============='.format(attack))
-        if (len(attacks) > 4):
+        if (dataset != 'hcrl' ):
             finput = '{}/{}.csv'.format(indir, attack)
             df, total_normal, total_attack = preprocess_altformat(finput, total_normal, total_attack, alt_features)
         else:
@@ -220,8 +244,8 @@ def main(indir, outdir, attacks, alt_features):
         foutput_normal = '{}/Normal_{}'.format(outdir, attack)
         df_attack = df[df['label'] == 1]
         df_normal = df[df['label'] == 0]
-        write_tfrecord(df_attack, foutput_attack)
-        write_tfrecord(df_normal, foutput_normal)
+        write_tfrecord(df_attack, foutput_attack, alt_features)
+        write_tfrecord(df_normal, foutput_normal, alt_features)
         
         data_info[foutput_attack] = df_attack.shape[0]
         data_info[foutput_normal] = df_normal.shape[0]
@@ -243,22 +267,23 @@ if __name__ == '__main__':
     elif (args.attack_type == 'tu'):
         attack_types = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay']
     elif (args.attack_type == 'road_without_masquerade'):
-        attack_types = [#'ambient_street_driving_long', # some ambient data to fill up the normal data gap
-                        'correlated_signal_attack_1',
-                        'correlated_signal_attack_2',
-                        'correlated_signal_attack_3',
-                        'fuzzing_attack_1',
-                        'fuzzing_attack_2',
-                        'fuzzing_attack_3',
-                        'max_speedometer_attack_1',
-                        'max_speedometer_attack_2',
-                        'max_speedometer_attack_3',
-                        'reverse_light_off_attack_1',
-                        'reverse_light_off_attack_2',
-                        'reverse_light_off_attack_3',
-                        'reverse_light_on_attack_1',
-                        'reverse_light_on_attack_2',
-                        'reverse_light_on_attack_3'
+        attack_types = ['road_without_masquerade_32',
+                        #'ambient_street_driving_long', # some ambient data to fill up the normal data gap
+                        #'correlated_signal_attack_1',
+                        #'correlated_signal_attack_2',
+                        #'correlated_signal_attack_3',
+                        #'fuzzing_attack_1',
+                        #'fuzzing_attack_2',
+                        #'fuzzing_attack_3',
+                        #'max_speedometer_attack_1',
+                        #'max_speedometer_attack_2',
+                        #'max_speedometer_attack_3',
+                        #'reverse_light_off_attack_1',
+                        #'reverse_light_off_attack_2',
+                        #'reverse_light_off_attack_3',
+                        #'reverse_light_on_attack_1',
+                        #'reverse_light_on_attack_2',
+                        #'reverse_light_on_attack_3'
                         ]
     elif (args.attack_type == 'road_with_masquerade'):
         attack_types = ['ambient_street_driving_long', # some ambient data to fill up the normal data gap
@@ -292,7 +317,7 @@ if __name__ == '__main__':
                         'reverse_light_on_attack_3'
                         ]
     elif (args.attack_type == 'road_just_masquerade'):
-        attack_types = ['ambient_dyno_drive_basic_long', # some ambient data to fill up the normal data gap
+        attack_types = [#'ambient_dyno_drive_basic_long', # some ambient data to fill up the normal data gap
                         'correlated_signal_attack_1_masquerade',
                         'correlated_signal_attack_2_masquerade',
                         'correlated_signal_attack_3_masquerade',
@@ -311,8 +336,8 @@ if __name__ == '__main__':
         attack_types = [args.attack_type]
 
     if (args.alt_features_simple):
-        main(args.indir, args.outdir, attack_types, 'simple')
+        main(args.indir, args.outdir, attack_types, 'simple', args.attack_type)
     elif (args.alt_features_complex):
-        main(args.indir, args.outdir, attack_types, 'complex')
+        main(args.indir, args.outdir, attack_types, 'complex', args.attack_type)
     else:
-       main(args.indir, args.outdir, attack_types, 'original')
+       main(args.indir, args.outdir, attack_types, 'original', args.attack_type)

@@ -16,13 +16,16 @@ gpus= tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(gpus[0], True)
 
 class Model:
-    def __init__(self, dataset, model='AAE', data_dir='./Data/', unknown_attack=None,input_dim=29*29, z_dim=10, batch_size=100, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001):
+    def __init__(self, dataset, model='AAE', data_dir='./Data/', unknown_attack=None,input_dim=29*29, z_dim=10, batch_size=100, n_epochs=100, supervised_lr=0.0001, reconstruction_lr=0.0001, regularization_lr=0.0001, alt_features='original'):
         self.is_build = False
         self.dataset = dataset
+        self.alt_features = alt_features
         self.unknown_attack = unknown_attack
         self.data_dir = data_dir
         self.read_datainfo()
         self.input_dim = input_dim
+        if (alt_features != 'original'): # change later to complex option as well
+            self.input_dim = 32*11
         self.n_l1 = 1000
         self.n_l2 = 1000
         self.z_dim = z_dim
@@ -87,21 +90,22 @@ class Model:
                         'Normal'
                         ]
         if (self.dataset == 'road/without_masquerade'):
-            self.labels = ['correlated_signal_attack_1',
-                        'correlated_signal_attack_2',
-                        'correlated_signal_attack_3',
-                        'fuzzing_attack_1',
-                        'fuzzing_attack_2',
-                        'fuzzing_attack_3',
-                        'max_speedometer_attack_1',
-                        'max_speedometer_attack_2',
-                        'max_speedometer_attack_3',
-                        'reverse_light_off_attack_1',
-                        'reverse_light_off_attack_2',
-                        'reverse_light_off_attack_3',
-                        'reverse_light_on_attack_1',
-                        'reverse_light_on_attack_2',
-                        'reverse_light_on_attack_3',
+            self.labels = ['road_without_masquerade_32',
+                        #'correlated_signal_attack_1',
+                        #'correlated_signal_attack_2',
+                        #'correlated_signal_attack_3',
+                        #'fuzzing_attack_1',
+                        #'fuzzing_attack_2',
+                        #'fuzzing_attack_3',
+                        #'max_speedometer_attack_1',
+                        #'max_speedometer_attack_2',
+                        #'max_speedometer_attack_3',
+                        #'reverse_light_off_attack_1',
+                        #'reverse_light_off_attack_2',
+                        #'reverse_light_off_attack_3',
+                        #'reverse_light_on_attack_1',
+                        #'reverse_light_on_attack_2',
+                        #'reverse_light_on_attack_3',
                         'Normal'
                         ]
         if (self.dataset == 'road/just_masquerade'):
@@ -141,16 +145,16 @@ class Model:
         print('Unlabeled data: ', train_unlabel_paths)
         print('Label data:', train_label_paths)
         
-        train_unlabel = data_from_tfrecord(train_unlabel_paths, self.batch_size - self.batch_size_unknown, self.n_epochs)
+        train_unlabel = data_from_tfrecord(train_unlabel_paths, self.batch_size - self.batch_size_unknown, self.n_epochs, alt_features=self.alt_features)
         # train_unlabel_unknown = data_from_tfrecord(unknown_train_unlabel_path, self.batch_size_unknown, self.n_epochs)
-        train_label = data_from_tfrecord(train_label_paths, self.batch_size, self.n_epochs)
-        validation = data_from_tfrecord(val_paths, self.batch_size, self.n_epochs)
+        train_label = data_from_tfrecord(train_label_paths, self.batch_size, self.n_epochs, alt_features=self.alt_features)
+        validation = data_from_tfrecord(val_paths, self.batch_size, self.n_epochs, alt_features=self.alt_features)
         
         if self.unknown_attack != None:
             val_unknown_path = ['{}/{}/val'.format(self.data_dir, a) for a in [self.unknown_attack, 'Normal']]
             data_info_unknown_attack = json.load(open('{}/{}/datainfo.txt'.format(self.data_dir, self.unknown_attack)))
             self.validation_unknown_size = data_info_unknown_attack['validation']
-            self.validation_unknown = data_from_tfrecord(val_unknown_path, self.batch_size, self.n_epochs) 
+            self.validation_unknown = data_from_tfrecord(val_unknown_path, self.batch_size, self.n_epochs, alt_features=self.alt_features) 
         
         return train_unlabel, train_label, validation
         
@@ -183,9 +187,9 @@ class Model:
         # Encoder try to predict both label and latent space of the input, which will be feed into Decoder to reconstruct the input
         # The process is optimized by autoencoder_loss which is the MSE of the decoder_output and the orginal input
         with (tf.variable_scope(tf.get_variable_scope())):
-            self.encoder_output_label, self.encoder_output_latent = self.model.encoder(self.x_input, self.keep_prob)
+            self.encoder_output_label, self.encoder_output_latent = self.model.encoder(self.x_input, self.keep_prob, alt_features=self.alt_features)
             decoder_input = tf.concat([self.encoder_output_label, self.encoder_output_latent], 1)
-            decoder_output = self.model.decoder(decoder_input)
+            decoder_output = self.model.decoder(decoder_input, alt_features=self.alt_features)
 
         self.autoencoder_loss = tf.reduce_mean(tf.square(self.x_target - decoder_output))
         self.autoencoder_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1).minimize(self.autoencoder_loss)
@@ -225,7 +229,7 @@ class Model:
         # Semi-Supervised Classification Phase
         # Train encoder with a small amount of label samples
         with tf.variable_scope(tf.get_variable_scope()):
-            self.encoder_output_label_, self.encoder_output_latent_ = self.model.encoder(self.x_input_l, self.keep_prob, reuse=True, supervised=True)
+            self.encoder_output_label_, self.encoder_output_latent_ = self.model.encoder(self.x_input_l, self.keep_prob, reuse=True, supervised=True, alt_features=self.alt_features)
 
         # Classification accuracy of encoder
         self.output_label = tf.argmax(self.encoder_output_label_, 1)
@@ -411,7 +415,7 @@ class Model:
             print("Restoring saved model from: {}".format(results_path + 'Saved_models'))
 
             saver.restore(sess, save_path=tf.train.latest_checkpoint(results_path + '/Saved_models'))
-            test = data_from_tfrecord(tf_filepath=[p + 'test' for p in data_path], batch_size=self.batch_size, repeat_time=1, shuffle=False)
+            test = data_from_tfrecord(tf_filepath=[p + 'test' for p in data_path], batch_size=self.batch_size, repeat_time=1, shuffle=False, alt_features=self.alt_features)
             num_batches = int(test_size / self.batch_size)
             y_true = np.empty((0), int)
             y_pred = np.empty((0), int)
@@ -475,9 +479,10 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--is_train', action='store_true')
     parser.add_argument('--dataset', type=str, default='hcrl')
+    parser.add_argument('--alt_features', type=str, default='original') # other options: 'simple' or 'complex'
     args = parser.parse_args()
     
-    model = Model(args.dataset, model=args.model, data_dir=args.data_dir, unknown_attack = args.unknown_attack, batch_size=args.batch_size, n_epochs=args.epochs)
+    model = Model(args.dataset, model=args.model, data_dir=args.data_dir, unknown_attack = args.unknown_attack, batch_size=args.batch_size, n_epochs=args.epochs, alt_features=args.alt_features)
     if args.is_train:
         model.train()
     else:

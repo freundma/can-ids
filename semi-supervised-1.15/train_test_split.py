@@ -9,17 +9,27 @@ import os
 import argparse
 
 
-def serialize_example(x, y):
+def serialize_example(x, y, alt_features):
     """converts x, y to tf.train.Example and serialize"""
     #Need to pay attention to whether it needs to be converted to numpy() form
-    input_features = tf.train.Int64List(value = np.array(x).flatten())
-    label = tf.train.Int64List(value = np.array([y]))
-    features = tf.train.Features(
-        feature = {
-            "input_features": tf.train.Feature(int64_list = input_features),
-            "label" : tf.train.Feature(int64_list = label)
-        }
-    )
+    if (alt_features == 'original'):
+        input_features = tf.train.Int64List(value = np.array(x).flatten())
+        label = tf.train.Int64List(value = np.array([y]))
+        features = tf.train.Features(
+            feature = {
+                "input_features": tf.train.Feature(int64_list = input_features),
+                "label" : tf.train.Feature(int64_list = label)
+            }
+        )
+    else:
+        input_features = tf.train.FloatList(value = np.array(x).flatten())
+        label = tf.train.Int64List(value = np.array([y]))
+        features = tf.train.Features(
+            feature = {
+                "input_features": tf.train.Feature(float_list = input_features),
+                "label" : tf.train.Feature(int64_list = label)
+            }
+        )
     example = tf.train.Example(features = features)
     return example.SerializeToString()
 
@@ -27,6 +37,14 @@ def read_tfrecord(example):
     input_dim = 29 * 29
     feature_description = {
     'input_features': tf.io.FixedLenFeature([input_dim], tf.int64),
+    'label': tf.io.FixedLenFeature([1], tf.int64)
+    }
+    return tf.io.parse_single_example(example, feature_description)
+
+def read_tfrecord_alt_features_simple(example):
+    input_dim = 32 * 11
+    feature_description = {
+    'input_features': tf.io.FixedLenFeature([input_dim], tf.float32),
     'label': tf.io.FixedLenFeature([1], tf.int64)
     }
     return tf.io.parse_single_example(example, feature_description)
@@ -49,7 +67,7 @@ def data_helper(data_tf, sess):
     y_one_hot = np.eye(n_labels)[y].reshape([size, n_labels])
     return x, y_one_hot
 
-def write_tfrecord(data, filename):
+def write_tfrecord(data, filename, alt_features):
     print('Writing {}================= '.format(filename))
     iterator = data.make_one_shot_iterator().get_next()
     init = tf.global_variables_initializer()
@@ -60,13 +78,13 @@ def write_tfrecord(data, filename):
             try:
                 batch_data = sess.run(iterator)
                 for x, y in zip(batch_data['input_features'], batch_data['label']):
-                    tfrecord_writer.write(serialize_example(x, y))
+                    tfrecord_writer.write(serialize_example(x, y, alt_features))
             except:
                 break
             
     tfrecord_writer.close()
     
-def train_test_split(source_path, dest_path, DATASET_SIZE,\
+def train_test_split(source_path, dest_path, DATASET_SIZE, alt_features,\
                      train_label_ratio=0.1, train_ratio = 0.7, val_ratio = 0.15, test_ratio = 0.15):
 
     train_size = int(DATASET_SIZE * train_ratio)
@@ -77,7 +95,10 @@ def train_test_split(source_path, dest_path, DATASET_SIZE,\
     print(train_label_size, train_size, val_size, test_size)
     
     dataset = tf.data.TFRecordDataset(source_path)
-    dataset = dataset.map(read_tfrecord)
+    if (alt_features == 'original'):
+        dataset = dataset.map(read_tfrecord)
+    else:
+        dataset = dataset.map(read_tfrecord_alt_features_simple)
     dataset = dataset.shuffle(50000)
     
     train = dataset.take(train_size)
@@ -101,12 +122,12 @@ def train_test_split(source_path, dest_path, DATASET_SIZE,\
         "test": test_size
     }
     json.dump(train_test_info, open(dest_path + 'datainfo.txt', 'w'))
-    write_tfrecord(train_label, dest_path + 'train_label')
-    write_tfrecord(train_unlabel, dest_path + 'train_unlabel')
-    write_tfrecord(test, dest_path + 'test')
-    write_tfrecord(val, dest_path + 'val')
+    write_tfrecord(train_label, dest_path + 'train_label', alt_features)
+    write_tfrecord(train_unlabel, dest_path + 'train_unlabel', alt_features)
+    write_tfrecord(test, dest_path + 'test', alt_features)
+    write_tfrecord(val, dest_path + 'val', alt_features)
     
-def main_attack(attack_types, args):
+def main_attack(attack_types, args, alt_features):
     indir = args.indir
     outdir = args.outdir + '/Train_{}_Labeled_{}'.format(args.train_ratio, args.train_label_ratio)
     data_info = json.load(open('{}/datainfo.txt'.format(indir)))
@@ -116,11 +137,11 @@ def main_attack(attack_types, args):
         dest = '{}/{}/'.format(outdir, attack)
         if not os.path.exists(dest):
             os.makedirs(dest)
-        train_test_split(source, dest, data_info[source], 
+        train_test_split(source, dest, data_info[source], alt_features, 
                         train_label_ratio=args.train_label_ratio, train_ratio=args.train_ratio, 
                         val_ratio=args.val_ratio, test_ratio=args.test_ratio)
         
-def main_normal(attack_types, args):
+def main_normal(attack_types, args, alt_features):
     indir = args.indir
     outdir = args.outdir + '/Train_{}_Labeled_{}'.format(args.train_ratio, args.train_label_ratio)
     normal_size = 0
@@ -132,7 +153,7 @@ def main_normal(attack_types, args):
     if not os.path.exists(dest):
         os.makedirs(dest)
         
-    train_test_split(sources, dest, normal_size, 
+    train_test_split(sources, dest, normal_size, alt_features,
                     train_label_ratio=args.train_label_ratio)
     
 if __name__ == '__main__':
@@ -145,6 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_label_ratio', type=float, default=0.1)
     parser.add_argument('--val_ratio', type=float, default=0.15)
     parser.add_argument('--test_ratio', type=float, default=0.15)
+    parser.add_argument('--alt_features', type=str, default='original') # other options: 'simple' or 'complex'
     args = parser.parse_args()
 
     if args.attack_type == 'hcrl':
@@ -152,22 +174,23 @@ if __name__ == '__main__':
     elif (args.attack_type == 'tu'):
         attack_types = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay']
     elif (args.attack_type == 'road_without_masquerade'):
-        attack_types = ['ambient_street_driving_long',
-                        'correlated_signal_attack_1',
-                        'correlated_signal_attack_2',
-                        'correlated_signal_attack_3',
-                        'fuzzing_attack_1',
-                        'fuzzing_attack_2',
-                        'fuzzing_attack_3',
-                        'max_speedometer_attack_1',
-                        'max_speedometer_attack_2',
-                        'max_speedometer_attack_3',
-                        'reverse_light_off_attack_1',
-                        'reverse_light_off_attack_2',
-                        'reverse_light_off_attack_3',
-                        'reverse_light_on_attack_1',
-                        'reverse_light_on_attack_2',
-                        'reverse_light_on_attack_3'
+        attack_types = ['road_without_masquerade_32',
+                        #'ambient_street_driving_long', # some ambient data to fill up the normal data gap
+                        #'correlated_signal_attack_1',
+                        #'correlated_signal_attack_2',
+                        #'correlated_signal_attack_3',
+                        #'fuzzing_attack_1',
+                        #'fuzzing_attack_2',
+                        #'fuzzing_attack_3',
+                        #'max_speedometer_attack_1',
+                        #'max_speedometer_attack_2',
+                        #'max_speedometer_attack_3',
+                        #'reverse_light_off_attack_1',
+                        #'reverse_light_off_attack_2',
+                        #'reverse_light_off_attack_3',
+                        #'reverse_light_on_attack_1',
+                        #'reverse_light_on_attack_2',
+                        #'reverse_light_on_attack_3'
                         ]
     elif (args.attack_type == 'road_with_masquerade'):
         attack_types = ['ambient_street_driving_long',
@@ -222,7 +245,7 @@ if __name__ == '__main__':
         attack_types = args.attack_type
     
     if args.normal:
-        main_normal(attack_types, args)
+        main_normal(attack_types, args, args.alt_features)
         
     if attack_types is not None:
-        main_attack(attack_types, args)
+        main_attack(attack_types, args, args.alt_features)

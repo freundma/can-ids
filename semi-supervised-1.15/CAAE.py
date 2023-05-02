@@ -24,12 +24,16 @@ class CAAE:
             out = tf.add(tf.matmul(x, weights), bias, name='matmul')
             return out
         
-    def encoder(self, x, keep_prob, reuse=False, supervised=False):
+    def encoder(self, x, keep_prob, reuse=False, supervised=False, alt_features='original'):
         if reuse:
             tf.get_variable_scope().reuse_variables()
         with tf.name_scope('Encoder'):
             x_input = tf.reshape(x, shape=[-1, 29, 29, 1]) #[batch_size, 29*29] -> [batch_size, 29, 29, 1]
             x_input = tf.pad(x_input, [[0, 0], [1, 2], [1, 2], [0, 0]]) #[batch_size, 29, 29, 1] -> [batch_size, 32, 32, 1]
+
+            if (alt_features != 'original'):
+                x_input = tf.reshape(x, shape=[-1, 32, 11, 1]) #[batch_size, 32*11] -> [batch_size, 32, 11, 1]
+                x_input = tf.pad(x_input, [[0, 0], [0, 0], [11, 10], [0, 0]]) #[batch_size, 32, 11, 1] -> [batch_size, 32, 32, 1]
         
             #print('Input encoder: ', x_input.shape)
             conv1 = conv2d(x_input, name='e_conv1', kshape=[3, 3, 1, 32]) #[32, 32, 1] -> [32, 32, 32]
@@ -54,7 +58,7 @@ class CAAE:
                 softmax_label = cat_op
             return softmax_label, latent_variable
     
-    def decoder(self, x, reuse=False):
+    def decoder(self, x, reuse=False, alt_features='original'):
         if reuse:
             tf.get_variable_scope().reuse_variables()
         with tf.name_scope('Decoder'):
@@ -75,6 +79,10 @@ class CAAE:
 
             out = tf.image.crop_to_bounding_box(up4, 1, 1, 29, 29)
             out = tf.reshape(out, shape=[-1, 29 * 29])
+
+            if (alt_features != 'original'):
+                out = tf.image.crop_to_bounding_box(up4, 0, 11, 32, 11)
+                out = tf.reshape(out, shape=[-1, 32 * 11])
             
             return out
 

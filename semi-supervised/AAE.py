@@ -32,7 +32,7 @@ class AAE:
             out = tf.add(tf.matmul(x, weights), bias, name='matmul')
             return out
 
-    def encoder(self, x, reuse=False, supervised=False):
+    def encoder(self, x, reuse=False, supervised=False, alt_feautes='original'):
         """
         Encode part of the autoencoder.
         :param x: input to the autoencoder
@@ -41,8 +41,8 @@ class AAE:
                            False -> returns output after passing it through softmax.
         :return: tensor which is the classification output and a hidden latent variable of the autoencoder.
         """
-        if reuse:
-            tf.compat.v1.get_variable_scope().reuse_variables()
+        #if reuse:
+        #    tf.compat.v1.get_variable_scope().reuse_variables()
         with tf.name_scope('Encoder'):
             e_dense_1 = tf.nn.relu(self.dense(x, self.input_dim, self.n_l1, 'e_dense_1'))
             e_dense_2 = tf.nn.relu(self.dense(e_dense_1, self.n_l1, self.n_l2, 'e_dense_2'))
@@ -54,15 +54,15 @@ class AAE:
                 softmax_label = cat_op
             return softmax_label, latent_variable
 
-    def decoder(self, x, reuse=False):
+    def decoder(self, x, reuse=False, alt_features='original'):
         """
         Decoder part of the autoencoder.
         :param x: input to the decoder
         :param reuse: True -> Reuse the decoder variables, False -> Create or search of variables before creating
         :return: tensor which should ideally be the input given to the encoder.
         """
-        if reuse:
-            tf.compat.v1.get_variable_scope().reuse_variables()
+        #if reuse:
+        #    tf.compat.v1.get_variable_scope().reuse_variables()
         with tf.name_scope('Decoder'):
             d_dense_1 = tf.nn.relu(self.dense(x, self.z_dim + self.n_labels, self.n_l2, 'd_dense_1'))
             d_dense_2 = tf.nn.relu(self.dense(d_dense_1, self.n_l2, self.n_l1, 'd_dense_2'))
