@@ -42,10 +42,10 @@ def get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, al
         df_id = df_t.loc[df_t['ID'] == id]
         #print(df_id)
         if (df_id.empty): # take cached value
-            if (not all_seen):
-                clean = False
-            else:
+            if (str(id) in cache):
                 s[offset:offsets[i]] = cache[str(id)]
+            else:
+                clean = False
             offset = offsets[i]
             i += 1
             continue
@@ -133,7 +133,7 @@ def main(inputfile, outfile, delta_t, w):
     steps = 0
     s_w = np.empty([w, offsets[-1]])
     all_seen = False
-    for t in ((np.arange(delta_t, max_t, delta_t))):
+    for t in (tqdm(np.arange(delta_t, max_t, delta_t))):
         if (((steps % w) == 0) and (steps > 0)): # wait until we have w vectors
             s_w = np.reshape(s_w, w*offsets[-1]) # e.g. 200*664
             # write to TF_Record
@@ -144,8 +144,8 @@ def main(inputfile, outfile, delta_t, w):
             s_w = np.empty([w, offsets[-1]])
 
         s, cache = get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, all_seen)
-        print(s)
-        print("-------------------------------------------")
+        #print(s)
+        #print("-------------------------------------------")
         if (not(s is None)):
             all_seen = True
             s_w[steps % w] = s
