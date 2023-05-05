@@ -23,7 +23,7 @@ def scale_s(s, unique_id_list, min_dict, max_dict):
         mins_i = min_dict[str(unique_id_list[i])]
         maxs_i = max_dict[str(unique_id_list[i])]
         for j in range(len(mins_i)): # scale
-            if(maxs_i[j] == mins_i[j]):
+            if(maxs_i[j] == mins_i[j]): # constant value
                 scaled_s[offset+j] = 1.0
             else:
                 scaled_s[offset+j] = (scaled_s[offset+j] - mins_i[j]) / (maxs_i[j] - mins_i[j]) # s^_i  = (s_i - min_i) / (max_i - min_i)
@@ -122,6 +122,8 @@ def main(inputfile, outfile, delta_t, w):
         max_dict[str(id)] = maxs
         offsets.append(len(mins))
 
+    # ambient dyno drive short: 26 constant signal streams with a total of 140 constant signals
+
     offsets = compute_offsets(offsets)
 
     # prepare writing to disk
@@ -148,8 +150,6 @@ def main(inputfile, outfile, delta_t, w):
             all_seen = True
             s_w[steps % w] = s
             steps += 1
-
-    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
