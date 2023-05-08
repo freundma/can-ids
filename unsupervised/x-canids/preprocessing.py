@@ -132,24 +132,37 @@ def main(inputfile, outfile, delta_t, w):
 
     # loop over time steps
     steps = 0
-    s_w = np.empty([w, offsets[-1]])
+    #s_w = np.empty([w, offsets[-1]]) # window * number of signals
+    total_s_len = int((max_t + delta_t)/delta_t)
+    total_s = np.empty([total_s_len, offsets[-1]])
     all_seen = False
     for t in (tqdm(np.arange(delta_t, max_t + delta_t, delta_t))):
-        if (((steps % w) == 0) and (steps > 0)): # wait until we have w vectors
-            s_w = np.reshape(s_w, w*offsets[-1]) # e.g. 200*664
+        #if (((steps % w) == 0) and (steps > 0)): # wait until we have w vectors
+        #    s_w = np.reshape(s_w, w*offsets[-1]) # e.g. 200*664
             # write to TF_Record
-            example = tf.train.Example(features=tf.train.Features(feature={
-                'X': tf.train.Feature(float_list=tf.train.FloatList(value=s_w))
-            }))
-            writer.write(example.SerializeToString())
-            s_w = np.empty([w, offsets[-1]])
+        #    example = tf.train.Example(features=tf.train.Features(feature={
+        #        'X': tf.train.Feature(float_list=tf.train.FloatList(value=s_w))
+        #    }))
+        #    writer.write(example.SerializeToString())
+        #    s_w = np.empty([w, offsets[-1]])
 
         s, cache = get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, all_seen)
     
         if (not(s is None)):
             all_seen = True
-            s_w[steps % w] = s
+            #s_w[steps % w] = s
+            total_s[steps] = s # collect all scaled vectors s
             steps += 1
+    
+    total_s = total_s[:steps] # truncate to true number of s
+    X = np.lib.stride_tricks.sliding_window_view(total_s, (w, offsets[-1])).reshape(-1, w, offsets[-1]) # sliding window every delt_t seconds e.g. 0.01
+    X = X.reshape(-1, w*offsets[-1])
+    for idx in range(X.shape[0]):
+        x = X[idx]
+        example = tf.train.Example(features=tf.train.Features(feature={
+            'X': tf.train.Feature(float_list=tf.train.FloatList(value=x))
+        }))
+        writer.write(example.SerializeToString())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
