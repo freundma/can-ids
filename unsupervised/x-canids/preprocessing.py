@@ -157,6 +157,7 @@ def main(inputfile, outfile, delta_t, w):
     total_s = total_s[:steps] # truncate to true number of s
     X = np.lib.stride_tricks.sliding_window_view(total_s, (w, offsets[-1])).reshape(-1, w, offsets[-1]) # sliding window every delt_t seconds e.g. 0.01
     X = X.reshape(-1, w*offsets[-1])
+    assert not np.any(np.isnan(X))
     for idx in range(X.shape[0]):
         x = X[idx]
         example = tf.train.Example(features=tf.train.Features(feature={
