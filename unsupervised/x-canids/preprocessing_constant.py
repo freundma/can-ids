@@ -218,7 +218,7 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
         pack["constant_signals"] = const_dict
         pack["offsets"] = offsets
         print("number of constant signals excluded: {}".format(constant_signals_total))
-        with open ('constant_signals.json', 'w') as f:
+        with open ('Data/constant_signals.json', 'w') as f:
             json.dump(pack, f)
     else:
         print("number of constant signals: {}".format(constant_signals_total))
