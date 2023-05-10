@@ -108,7 +108,7 @@ def range_of_signals(df, id):
         mins.append(df_id[col].min())
     return mins, maxs, constant_signals
 
-def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_signal_file):
+def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_signal_file, truncate_to):
     df = pd.read_csv(inputfile, dtype={
         'Label': bool,
         'Time': float,
@@ -182,13 +182,18 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     writer = tf.io.TFRecordWriter(results_path)
 
     # loop over time steps
+    s_len = offsets[-1]
+    if (truncate_to):
+        s_len = truncate_to
     steps = 0
     total_s_len = int((max_t + delta_t)/delta_t)
-    total_s = np.empty([total_s_len, offsets[-1]])
+    total_s = np.empty([total_s_len, s_len])
     print("extracting.........")
     for t in (tqdm(np.arange(delta_t, max_t + delta_t, delta_t))):
 
         s, cache = get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, const_dict, exclude_constant_signals)
+        if (truncate_to):
+            s = s[:truncate_to]
     
         if (not(s is None)):
             #s_w[steps % w] = s
@@ -196,9 +201,9 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
             steps += 1
     
     total_s = total_s[:steps] # truncate to true number of s
-    X = np.lib.stride_tricks.sliding_window_view(total_s, (w, offsets[-1])) # sliding window every delt_t seconds e.g. 0.01
-    X = X.reshape(-1, w, offsets[-1]) 
-    X = X.reshape(-1, w*offsets[-1])
+    X = np.lib.stride_tricks.sliding_window_view(total_s, (w, s_len)) # sliding window every delt_t seconds e.g. 0.01
+    X = X.reshape(-1, w, s_len) 
+    X = X.reshape(-1, w*s_len)
     assert not np.any(np.isnan(X))
     print("writing TFRecord.........")
     for idx in tqdm(range(X.shape[0])):
@@ -208,7 +213,7 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
         }))
         writer.write(example.SerializeToString())
 
-    print("window: {}, number of signals: {}".format(w, offsets[-1]))
+    print("window: {}, number of signals: {}".format(w, s_len))
     if (exclude_constant_signals):
         pack = {}
         pack["constant_signals"] = const_dict
@@ -227,6 +232,7 @@ if __name__ == '__main__':
     parser.add_argument('--windowsize', type=int, default=200)
     parser.add_argument('--exclude_constant_signals', action='store_true')
     parser.add_argument('--constant_signal_file', type=str)
+    parser.add_argument('--truncate_to', type=int)
     args = parser.parse_args()
 
-    main(args.infile, args.outfile, args.timesteps, args.windowsize, args.exclude_constant_signals, args.constant_signal_file)
+    main(args.infile, args.outfile, args.timesteps, args.windowsize, args.exclude_constant_signals, args.constant_signal_file, args.truncate_to)
