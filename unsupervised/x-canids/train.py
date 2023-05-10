@@ -26,6 +26,21 @@ def x_canids_model(window, num_signals, num_units):
     model.add(TimeDistributed(Dense(num_signals)))
     return model
 
+def x_canids_model_stock(window, num_signals):
+    model = Sequential()
+    model.add((Bidirectional(LSTM(107, activation='relu',
+                                  input_shape=(window, num_signals), return_sequences=True))))
+    model.add((Bidirectional(LSTM(125, activation='relu',
+                                  return_sequences=False))))
+    model.add(RepeatVector(window))
+    model.add(Bidirectional(LSTM(107, activation='relu',
+                                 return_sequences=True)))
+    model.add(Bidirectional(LSTM(107, activation='relu',
+                                 return_sequences=True)))
+    model.add(TimeDistributed(Dense(num_signals)))
+    return model
+    
+
 def main(infile, outfile, window, num_signals, epochs, batch_size, num_units):
     # Read TFRecord
     filenames = [infile]
@@ -47,12 +62,13 @@ def main(infile, outfile, window, num_signals, epochs, batch_size, num_units):
     dataset = raw_dataset.map(read_tfrecord)
     dataset = dataset.batch(batch_size)
 
-    model = x_canids_model(window, num_signals, num_units)
+    model = x_canids_model_stock(window, num_signals)
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
     loss = tf.keras.losses.MeanSquaredError()
     model.compile(optimizer=optimizer, loss=loss)
     model.build((None, window, num_signals))
     print(model.summary())
+    exit(0)
 
     callback=tf.keras.callbacks.EarlyStopping(monitor='loss', patience=50)
     

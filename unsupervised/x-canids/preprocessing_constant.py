@@ -57,7 +57,6 @@ def get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, co
             for signal in const_dict[str(id)]:
                 df_id = df_id.drop(['Signal_{}_of_ID'.format(signal)], axis=1) # drop constant signal
         signals = df_id.to_numpy().flatten()
-        print(signals)
         cache[str(id)] = signals # cache signals
         s[offset:offsets[i]] = signals
         offset = offsets[i]
@@ -192,10 +191,10 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     for t in (tqdm(np.arange(delta_t, max_t + delta_t, delta_t))):
 
         s, cache = get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, const_dict, exclude_constant_signals)
-        if (truncate_to):
-            s = s[:truncate_to]
     
         if (not(s is None)):
+            if (truncate_to):
+                s = s[:truncate_to]
             #s_w[steps % w] = s
             total_s[steps] = s # collect all scaled vectors s
             steps += 1
