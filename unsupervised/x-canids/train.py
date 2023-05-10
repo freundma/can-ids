@@ -68,7 +68,6 @@ def main(infile, outfile, window, num_signals, epochs, batch_size, num_units):
     model.compile(optimizer=optimizer, loss=loss)
     model.build((None, window, num_signals))
     print(model.summary())
-    exit(0)
 
     callback=tf.keras.callbacks.EarlyStopping(monitor='loss', patience=50)
     
