@@ -12,18 +12,22 @@ from keras.layers import RepeatVector
 from keras.layers import TimeDistributed
 from keras.layers import Bidirectional
 
+# Multi GPU setup
+mirrored_strategy = tf.distribute.MirroredStrategy()
+
 def x_canids_model(window, num_signals, latent_space_size):
-    model = Sequential()
-    model.add(Bidirectional(LSTM(num_signals, activation='relu',
+    with mirrored_strategy.scope():
+        model = Sequential()
+        model.add(Bidirectional(LSTM(num_signals, activation='relu',
                                  input_shape=(window, num_signals), return_sequences=True)))
-    model.add(Bidirectional(LSTM(latent_space_size, activation='relu',
+        model.add(Bidirectional(LSTM(latent_space_size, activation='relu',
                                  return_sequences=False)))
-    model.add(RepeatVector(window))
-    model.add(Bidirectional(LSTM(num_signals, activation='relu',
+        model.add(RepeatVector(window))
+        model.add(Bidirectional(LSTM(num_signals, activation='relu',
                                  return_sequences=True)))
-    model.add(Bidirectional(LSTM(num_signals, activation='relu',
+        model.add(Bidirectional(LSTM(num_signals, activation='relu',
                                  return_sequences=True)))
-    model.add(TimeDistributed(Dense(num_signals)))
+        model.add(TimeDistributed(Dense(num_signals)))
     return model
 
 def x_canids_model_stock(window, num_signals):
