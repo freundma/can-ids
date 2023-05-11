@@ -90,6 +90,27 @@ def range_of_signals_constant(df, id):
         signal += 1
     return mins, maxs, constant_signals, constant_signals_list
 
+def range_of_signals_constant_from_json(df, id, constant_signals_list):
+    df_id = df.loc[df['ID']==id]
+    df_id = df_id.drop(['Time','ID'], axis=1)
+    df_id = df_id.dropna(axis=1) 
+    # just relevant signal columns left
+    mins = []
+    maxs = []
+    constant_signals = 0
+    signal = 1
+    for col in df_id:
+        max = df_id[col].max()
+        min = df_id[col].min()
+        if (signal in constant_signals_list):
+            constant_signals += 1
+            signal += 1
+            continue
+        maxs.append(max)
+        mins.append(min)
+        signal += 1
+    return mins, maxs, constant_signals, constant_signals_list
+
 def range_of_signals(df, id):
     df_id = df.loc[df['ID']==id]
     df_id = df_id.drop(['Time','ID'], axis=1)
@@ -103,8 +124,8 @@ def range_of_signals(df, id):
         min = df_id[col].min()
         if (max == min):
             constant_signals += 1
-        maxs.append(df_id[col].max())
-        mins.append(df_id[col].min())
+        maxs.append(max)
+        mins.append(min)
     return mins, maxs, constant_signals
 
 def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_signal_file, truncate_to):
@@ -144,27 +165,35 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     min_dict = {}
     max_dict = {}
     const_dict = {}
-    if (constant_signal_file): # TODO unpack constant signals and offets
-        f = open(constant_signal_file)
-        const_dict = json.load(constant_signal_file)
-    cache = {}
     offsets = []
     const_list = []
-    max_t = df['Time'].max()
-
     constant_signals_total = 0
+    if (constant_signal_file): # TODO unpack constant signals and offsets
+        f = open(constant_signal_file)
+        const_signal_pack = json.load(f)
+        const_dict = const_signal_pack["constant_signals"]
+        offsets = const_signal_pack["offsets"]
+    cache = {}
+    max_t = df['Time'].max()
     
-    # get min max of each, check for constant signals
+    # get min max of each
+    # if we have an external file saying which signals to exclude we do that
+    # if we exclude constant signals, but don't have an external file, the constant signals are determined here
+    # if we don't exlude constant signals we just count them and leave them in the set
     for id in unique_id_list:
         if (exclude_constant_signals):
-            mins, maxs, constant_signals, const_list = range_of_signals_constant(df, id)
+            if (constant_signal_file):
+                mins, maxs, constant_signals, const_list = range_of_signals_constant_from_json(df, id, const_dict[str(id)])
+            else:
+                mins, maxs, constant_signals, const_list = range_of_signals_constant(df, id)
         else:
             mins, maxs, constant_signals = range_of_signals(df, id)
         constant_signals_total += constant_signals
         min_dict[str(id)] = mins
         max_dict[str(id)] = maxs
         const_dict[str(id)] = const_list
-        offsets.append(len(mins))
+        if (not constant_signal_file):
+            offsets.append(len(mins))
 
     # ambient dyno drive winter: 465 constant signals
     # ambient dyno drive basic long: 363
@@ -172,7 +201,8 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     # ambient dyno drive exercise all bits: 125
     # ambient highway street driving long: 293
 
-    offsets = compute_offsets(offsets)
+    if (not constant_signal_file):
+        offsets = compute_offsets(offsets)
     #print(offsets)
     #exit(0)
 
