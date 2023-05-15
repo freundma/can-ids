@@ -2,7 +2,6 @@
 # Author: Mario Freund
 # Purpose: Train x-canids classifier with benign preprocessed data
 
-import numpy as np
 import argparse
 import tensorflow as tf
 from keras.models import Sequential
