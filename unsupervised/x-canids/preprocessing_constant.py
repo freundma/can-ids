@@ -28,6 +28,8 @@ def scale_s(s, unique_id_list, min_dict, max_dict):
                 scaled_s[offset+j] = 1.0
             else:
                 scaled_s[offset+j] = (scaled_s[offset+j] - mins_i[j]) / (maxs_i[j] - mins_i[j]) # s^_i  = (s_i - min_i) / (max_i - min_i)
+                assert (scaled_s[offset+j] <= 1)
+                assert (scaled_s[offset+j] >= 0)
         offset += len(mins_i)
     return scaled_s
 
@@ -85,8 +87,8 @@ def range_of_signals_constant(df, id):
             constant_signals_list.append(signal)
             signal += 1
             continue
-        maxs.append(df_id[col].max())
-        mins.append(df_id[col].min())
+        maxs.append(max)
+        mins.append(min)
         signal += 1
     return mins, maxs, constant_signals, constant_signals_list
 
@@ -168,7 +170,7 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     offsets = []
     const_list = []
     constant_signals_total = 0
-    if (constant_signal_file): # TODO unpack constant signals and offsets
+    if (constant_signal_file):
         f = open(constant_signal_file)
         const_signal_pack = json.load(f)
         const_dict = const_signal_pack["constant_signals"]
@@ -203,8 +205,6 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
 
     if (not constant_signal_file):
         offsets = compute_offsets(offsets)
-    #print(offsets)
-    #exit(0)
 
     # prepare writing to disk
     results_path = outfile + ".tfrecords"
