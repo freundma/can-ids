@@ -88,11 +88,12 @@ def main(infile, outfile, window, num_signals, epochs, batch_size, latent_space_
             log_dir=tensorboard_path,
             write_graph=False
         )
+        callback_nan = tf.keras.callbacks.TerminateOnNaN()
     
         model.fit(
             x=dataset,
             epochs=epochs,
-            callbacks=[callback_early_stopping, callback_checkpoint, callback_tensorboard],
+            callbacks=[callback_early_stopping, callback_checkpoint, callback_tensorboard, callback_nan],
         )
     
         model.save(outfile)
