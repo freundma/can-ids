@@ -68,7 +68,7 @@ def main(infile, outfile, window, num_signals, epochs, batch_size, latent_space_
         dataset = dataset.batch(batch_size)
 
         model = x_canids_model(window, num_signals, latent_space_size)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001,beta1=0.9,beta2=0.9)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001,beta_1=0.9,beta_2=0.9)
         loss = tf.keras.losses.MeanSquaredError()
         model.compile(optimizer=optimizer, loss=loss)
         model.build((None, window, num_signals))
