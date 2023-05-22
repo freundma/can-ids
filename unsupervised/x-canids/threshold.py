@@ -89,7 +89,7 @@ def main(model_path, train_data, val_data, window, signals, batch_size, percenti
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default= "./data/results/")
-    parser.add_argument('--train_data', type=str, defeault="./data/TFRecord.tfrecords")
+    parser.add_argument('--train_data', type=str, default="./data/TFRecord.tfrecords")
     parser.add_argument('--val_data', type=str, default="./data/TFRecord_val.tfrecords")
     parser.add_argument('--window', type=int, default=200)
     parser.add_argument('--signals', type=int, default=664)
