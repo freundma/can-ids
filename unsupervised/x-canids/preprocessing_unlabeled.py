@@ -233,17 +233,18 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     total_s = total_s[:steps] # truncate to true number of s
     X = np.lib.stride_tricks.sliding_window_view(total_s, (w, s_len)) # sliding window every delt_t seconds e.g. 0.01
     X = X.reshape(-1, w, s_len)
-    old_stdout = sys.stdout
-    with open('debug.txt', 'w') as f:
-        sys.stdout = f
-        print(total_s[:w+1])
-        print("----------------------")
-        print(X[0])
-        print("----------------------")
-        print(X[1])
-    sys.stdout = old_stdout
+    #old_stdout = sys.stdout
+    #with open('debug.txt', 'w') as f:
+    #    sys.stdout = f
+    #    print(total_s[:w+1])
+    #    print("----------------------")
+    #    print(X[0])
+    #    print("----------------------")
+    #    print(X[1])
+    #sys.stdout = old_stdout
     X = X.reshape(-1, w*s_len)
     assert not np.any(np.isnan(X))
+    assert not np.any(np.isinf(X))
     print("writing TFRecord.........")
     for idx in tqdm(range(X.shape[0])):
         x = X[idx]
