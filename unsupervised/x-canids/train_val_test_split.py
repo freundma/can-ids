@@ -14,14 +14,10 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
         if file.endswith(".tfrecords"):
             files.append(inpath+file)
     
-    # prepare tf writers
-    train_path = outpath + 'train.tfrecords'
-    val_path = outpath + 'val.tfrecords'
-    test_path = outpath + 'test.tfrecords'
-
-    train_writer = tf.io.TFRecordWriter(train_path)
-    val_writer = tf.io.TFRecordWriter(val_path)
-    test_writer = tf.io.TFRecordWriter(test_path)
+    # prepare tf outpaths
+    train_path = outpath + 'train/train_{}.tfrecords'
+    val_path = outpath + 'val/val_{}.tfrecords'
+    test_path = outpath + 'test/test_{}.tfrecords'
 
     # for each dataset read samples and split into train, test, validation
     dataset = tf.data.TFRecordDataset(files)
@@ -38,7 +34,7 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
     print("total samples: {}".format(num_samples))
     print("train samples: {}".format(train_size))
     print("validation samples: {}".format(val_size))
-    print("test size: {}".format(test_size))
+    print("test samples: {}".format(test_size))
 
     # split data
     train = dataset.take(train_size)
@@ -50,14 +46,30 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
 
     # write data
     print("writing train data.....")
+    i = 1
+    samples_per_file = 900
+    train_writer = tf.io.TFRecordWriter(train_path.format(0))
     for element in tqdm(train):
         train_writer.write(tf.io.serialize_tensor(element).numpy())
+        if ((i % samples_per_file) == 0):
+            train_writer = tf.io.TFRecordWriter(train_path.format(int(i/samples_per_file)))
+        i += 1
     print("writing validation data.....")
+    i = 1
+    val_writer = tf.io.TFRecordWriter(val_path.format(0))
     for element in tqdm(val):
         val_writer.write(tf.io.serialize_tensor(element).numpy())
+        if ((i % samples_per_file) == 0):
+            train_writer = tf.io.TFRecordWriter(val_path.format(int(i/samples_per_file)))
+        i += 1
     print("writing test data.....")
+    i = 1
+    test_writer = tf.io.TFRecordWriter(test_path.format(0))
     for element in tqdm(test):
         test_writer.write(tf.io.serialize_tensor(element).numpy())
+        if ((i % samples_per_file) == 0):
+            test_writer = tf.io.TFRecordWriter(test_path.format(int(i/samples_per_file)))
+        i += 1
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

@@ -17,7 +17,7 @@ def compute_offsets(offsets):
     return offsets
 
 def scale_s(s, unique_id_list, min_dict, max_dict):
-    scaled_s = s # copy
+    scaled_s = s.copy() # copy
     offset = 0
     for i in range(len(unique_id_list)):
         # get minimums and maximums of signal of each ID
@@ -41,13 +41,14 @@ def get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, co
     s = np.empty(offsets[-1]) # total amount of signals
     i = 0
     offset = 0
-    label = 0
+    labels = []
     for id in unique_id_list:
         df_id = df_t.loc[df_t['ID'] == id]
         if (df_id.empty): # take cached value
-            if (str(id) in cache):
-                s[offset:offsets[i]] = cache[str(id)]["signals"]
-                label = cache[str(id)]["label"]
+            if ('signals' in cache[str(id)]):
+                s[offset:offsets[i]] = cache[str(id)]['signals']
+                label = cache[str(id)]['label']
+                labels.append(label)
             else:
                 clean = False
             offset = offsets[i]
@@ -56,27 +57,28 @@ def get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, co
         index = df_id['Time'].idxmax() # latest value
         df_id = df_id.loc[[index]]
         df_id = df_id.drop(['Time','ID'], axis=1)
-        label = df_id['Label']
+        label = df_id['Label'].values[0]
+        labels.append(label)
         df_id = df_id.drop(['Label'], axis=1)
         df_id = df_id.dropna(axis=1)
         if (exclude_constant_signals):
             for signal in const_dict[str(id)]:
                 df_id = df_id.drop(['Signal_{}_of_ID'.format(signal)], axis=1) # drop constant signal
         signals = df_id.to_numpy().flatten()
-        cache[str(id)]["signals"] = signals # cache signals
-        cache[str(id)]["label"] = label # cache label
+        cache[str(id)]['signals'] = signals # cache signals
+        cache[str(id)]['label'] = label # cache label
         s[offset:offsets[i]] = signals
         offset = offsets[i]
         i += 1
 
     if (clean):
-        return scale_s(s, unique_id_list, min_dict, max_dict), cache, label
+        return scale_s(s, unique_id_list, min_dict, max_dict), cache, max(labels)
     else:
-        return None, cache
+        return None, cache, None
 
 def range_of_signals_constant(df, id):
     df_id = df.loc[df['ID']==id]
-    df_id = df_id.drop(['Time','ID'], axis=1)
+    df_id = df_id.drop(['Label','Time','ID'], axis=1)
     df_id = df_id.dropna(axis=1) 
     # just relevant signal columns left
     mins = []
@@ -99,7 +101,7 @@ def range_of_signals_constant(df, id):
 
 def range_of_signals_constant_from_json(df, id, constant_signals_list):
     df_id = df.loc[df['ID']==id]
-    df_id = df_id.drop(['Time','ID'], axis=1)
+    df_id = df_id.drop(['Label','Time','ID'], axis=1)
     df_id = df_id.dropna(axis=1) 
     # just relevant signal columns left
     mins = []
@@ -120,7 +122,7 @@ def range_of_signals_constant_from_json(df, id, constant_signals_list):
 
 def range_of_signals(df, id):
     df_id = df.loc[df['ID']==id]
-    df_id = df_id.drop(['Time','ID'], axis=1)
+    df_id = df_id.drop(['Label','Time','ID'], axis=1)
     df_id = df_id.dropna(axis=1) 
     # just relevant signal columns left
     mins = []
@@ -164,6 +166,7 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
         'Signal_22_of_ID': float,
     })
 
+    df = df[df.ID != 1649] # exlude ID with unregular signals
     unique_id_list = df['ID'].unique()
     unique_id_list.sort()
     unique_id_list = list(unique_id_list)
@@ -180,6 +183,9 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
         const_dict = const_signal_pack["constant_signals"]
         offsets = const_signal_pack["offsets"]
     cache = {}
+    # initialize cache
+    for id in unique_id_list:
+        cache[str(id)] = {}
     max_t = df['Time'].max()
     
     # get min max of each
@@ -239,7 +245,9 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     X = X.reshape(-1, w, s_len) 
     X = X.reshape(-1, w*s_len)
     Y = np.lib.stride_tricks.sliding_window_view(total_label, (w, 1))
-    Y = Y. reshape(-1, w, 1)
+    Y = Y.reshape(-1, w, 1)
+    Y = Y.reshape(-1, w)
+    Y = Y.astype(int)
     assert not np.any(np.isnan(X))
     print("writing TFRecord.........")
     for idx in tqdm(range(X.shape[0])):
@@ -267,7 +275,7 @@ if __name__ == '__main__':
     parser.add_argument('--infile', type=str, default="./ambient_street_driving_long.csv")
     parser.add_argument('--outfile', type=str, default="./")
     parser.add_argument('--timesteps', type=float, default=0.01)
-    parser.add_argument('--windowsize', type=int, default=200)
+    parser.add_argument('--windowsize', type=int, default=150)
     parser.add_argument('--exclude_constant_signals', action='store_true')
     parser.add_argument('--constant_signal_file', type=str)
     parser.add_argument('--truncate_to', type=int)

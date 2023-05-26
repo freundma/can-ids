@@ -4,6 +4,7 @@
 
 import argparse
 import sys
+import os
 import tensorflow as tf
 import numpy as np
 np.set_printoptions(threshold=sys.maxsize)
@@ -63,13 +64,23 @@ def x_canids_model_alternative(window, num_signals):
 
 def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_size, checkpoint_path, tensorboard_path, lr):
     # declare training, validation tfrecord files from data split
-    train_path = inpath + 'train.tfrecords'
-    val_path = inpath + 'val.tfrecords'
+    train_path = inpath + 'train/'
+    val_path = inpath + 'val/'
 
-    # Read TFRecord
+    train_files = []
+    for file in os.listdir(train_path):
+        if file.endswith(".tfrecords"):
+            train_files.append(train_path + file)
+
+    val_files = []
+    for file in os.listdir(val_path):
+        if file.endswith(".tfrecords"):
+            val_files.append(val_path + file)
+
+    # Read TFRecords
     with mirrored_strategy.scope():
-        raw_train_dataset = tf.data.TFRecordDataset(train_path)
-        raw_val_dataset = tf.data.TFRecordDataset(val_path)
+        raw_train_dataset = tf.data.TFRecordDataset(train_files)
+        raw_val_dataset = tf.data.TFRecordDataset(val_files)
     
         input_dim = num_signals * window
         feature_description = {
@@ -128,7 +139,7 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--inpath', type=str, default="Data/datasplit")
+    parser.add_argument('--inpath', type=str, default="Data/datasplit/")
     parser.add_argument('--outpath', type=str, default="Data/results/")
     parser.add_argument('--window', type=int, default=150)
     parser.add_argument('--signals', type=int, default=197)
