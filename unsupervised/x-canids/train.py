@@ -21,17 +21,17 @@ mirrored_strategy = tf.distribute.MirroredStrategy()
 def x_canids_model(window, num_signals, latent_space_size):
     with mirrored_strategy.scope():
         model = Sequential()
-        model.add(Bidirectional(LSTM(num_signals*2, activation='relu',
+        model.add(Bidirectional(LSTM(num_signals, activation='relu',
                                  input_shape=(window, num_signals), return_sequences=True)))
-        model.add(Bidirectional(LSTM(latent_space_size*2, activation='relu',
+        model.add(Bidirectional(LSTM(latent_space_size, activation='relu',
                                  return_sequences=False)))
         model.add(RepeatVector(window))
-        model.add(Bidirectional(LSTM(num_signals*2, activation='relu',
+        model.add(Bidirectional(LSTM(num_signals, activation='relu',
                                  return_sequences=True)))
-        model.add(Bidirectional(LSTM(num_signals*2, activation='relu',
+        model.add(Bidirectional(LSTM(num_signals, activation='relu',
                                  return_sequences=True)))
         model.add(TimeDistributed(Dense(num_signals)))
-        return model
+    return model
 
 def x_canids_model_stock(window, num_signals):
     model = Sequential()
@@ -79,8 +79,8 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
 
     # Read TFRecords
     with mirrored_strategy.scope():
-        raw_train_dataset = tf.data.TFRecordDataset(train_files)
-        raw_val_dataset = tf.data.TFRecordDataset(val_files)
+        raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
+        raw_val_dataset = tf.data.TFRecordDataset(val_files, num_parallel_reads=len(val_files))
     
         input_dim = num_signals * window
         feature_description = {
@@ -103,7 +103,7 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
         train_dataset = train_dataset.batch(batch_size, drop_remainder=True)
         val_dataset = raw_val_dataset.map(read_tfrecord)
         val_dataset = val_dataset.shuffle(1000000)
-        train_dataset = train_dataset.batch(batch_size, drop_remainder=True)
+        val_dataset = val_dataset.batch(batch_size, drop_remainder=True)
 
         model = x_canids_model(window, num_signals, latent_space_size)
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
@@ -112,7 +112,7 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
         model.build((None, window, num_signals))
         print(model.summary())
 
-    # callbacks
+        # callbacks
         checkpoint_filepath = checkpoint_path + "/weights.{epoch:02d}-{loss:2f}.hdf5"
         callback_early_stopping=tf.keras.callbacks.EarlyStopping(monitor='loss', patience=50)
         callback_checkpoint = tf.keras.callbacks.ModelCheckpoint(
@@ -151,4 +151,4 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=0.0001)
     args = parser.parse_args()
 
-    main(args.infile, args.outfile, args.window, args.signals, args.epochs, args.batch_size, args.latent_space_size, args.checkpoint_path, args.tensorboard_path, args.learning_rate)
+    main(args.inpath, args.outpath, args.window, args.signals, args.epochs, args.batch_size, args.latent_space_size, args.checkpoint_path, args.tensorboard_path, args.learning_rate)
