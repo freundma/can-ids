@@ -50,7 +50,7 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
     samples_per_file = 900
     train_writer = tf.io.TFRecordWriter(train_path.format(0))
     for element in tqdm(train):
-        train_writer.write(tf.io.serialize_tensor(element).numpy())
+        train_writer.write(element.numpy())
         if ((i % samples_per_file) == 0):
             train_writer = tf.io.TFRecordWriter(train_path.format(int(i/samples_per_file)))
         i += 1
@@ -58,7 +58,7 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
     i = 1
     val_writer = tf.io.TFRecordWriter(val_path.format(0))
     for element in tqdm(val):
-        val_writer.write(tf.io.serialize_tensor(element).numpy())
+        val_writer.write(element.numpy())
         if ((i % samples_per_file) == 0):
             train_writer = tf.io.TFRecordWriter(val_path.format(int(i/samples_per_file)))
         i += 1
@@ -66,7 +66,7 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
     i = 1
     test_writer = tf.io.TFRecordWriter(test_path.format(0))
     for element in tqdm(test):
-        test_writer.write(tf.io.serialize_tensor(element).numpy())
+        test_writer.write(element.numpy())
         if ((i % samples_per_file) == 0):
             test_writer = tf.io.TFRecordWriter(test_path.format(int(i/samples_per_file)))
         i += 1
