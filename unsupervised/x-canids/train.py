@@ -22,15 +22,15 @@ def x_canids_model(window, num_signals, latent_space_size):
     with mirrored_strategy.scope():
         model = Sequential()
         model.add(Bidirectional(LSTM(num_signals, activation='relu',
-                                 input_shape=(window, num_signals), return_sequences=True)))
-        model.add(Bidirectional(LSTM(latent_space_size, activation='relu',
+                                 input_shape=(window, num_signals), kernel_regularizer=tf.keras.regularizers.L1L2(), return_sequences=True)))
+        model.add(Bidirectional(LSTM(latent_space_size, activation='relu', kernel_regularizer=tf.keras.regularizers.L1L2(), 
                                  return_sequences=False)))
         model.add(RepeatVector(window))
-        model.add(Bidirectional(LSTM(num_signals, activation='relu',
+        model.add(Bidirectional(LSTM(num_signals, activation='relu', kernel_regularizer=tf.keras.regularizers.L1L2(), 
                                  return_sequences=True)))
-        model.add(Bidirectional(LSTM(num_signals, activation='relu',
+        model.add(Bidirectional(LSTM(num_signals, activation='relu', kernel_regularizer=tf.keras.regularizers.L1L2(), 
                                  return_sequences=True)))
-        model.add(TimeDistributed(Dense(num_signals)))
+        model.add(TimeDistributed(Dense(num_signals, kernel_regularizer=tf.keras.regularizers.L1L2())))
     return model
 
 def x_canids_model_stock(window, num_signals):
@@ -99,10 +99,10 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
         
         # prepare datasets
         train_dataset = raw_train_dataset.map(read_tfrecord)
-        train_dataset = train_dataset.shuffle(1000000)
+        train_dataset = train_dataset.shuffle(10000)
         train_dataset = train_dataset.batch(batch_size, drop_remainder=True)
         val_dataset = raw_val_dataset.map(read_tfrecord)
-        val_dataset = val_dataset.shuffle(1000000)
+        val_dataset = val_dataset.shuffle(10000)
         val_dataset = val_dataset.batch(batch_size, drop_remainder=True)
 
         model = x_canids_model(window, num_signals, latent_space_size)
