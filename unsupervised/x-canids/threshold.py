@@ -8,121 +8,124 @@ import numpy as np
 import os
 
 # Multi GPU setup
-# mirrored_strategy = tf.distribute.MirroredStrategy()
+mirrored_strategy = tf.distribute.MirroredStrategy()
 
 def main(model_path, data_path, outpath, window, signals, batch_size, percentile):
-    # obtain model
-    model = tf.keras.models.load_model(model_path)
+    with mirrored_strategy.scope():
+        # obtain model
+        model = tf.keras.models.load_model(model_path)
 
-    input_dim = signals * window
-    feature_description = {
-        'X': tf.io.FixedLenFeature([input_dim], tf.float32)
-    }
+        input_dim = signals * window
+        feature_description = {
+            'X': tf.io.FixedLenFeature([input_dim], tf.float32)
+        }
 
-    def read_tfrecord(example):
+        def read_tfrecord(example):
 
-        data = tf.io.parse_single_example(example, feature_description)
-        x = data['X']
-        feature = tf.reshape(x, shape=[window, signals])
-        feature = tf.debugging.assert_all_finite(feature, 'Input must be finite')
-        return feature
+            data = tf.io.parse_single_example(example, feature_description)
+            x = data['X']
+            feature = tf.reshape(x, shape=[window, signals])
+            feature = tf.debugging.assert_all_finite(feature, 'Input must be finite')
+            return feature
 
-    # obtain training data
-    train_path = data_path + 'train/'
-    val_path = data_path + 'val/'
+        # obtain training data
+        train_path = data_path + 'train/'
+        val_path = data_path + 'val/'
 
-    train_files = []
-    for file in os.listdir(train_path):
-        if file.endswith(".tfrecords"):
-            train_files.append(train_path + file)
+        train_files = []
+        for file in os.listdir(train_path):
+            if file.endswith(".tfrecords"):
+                train_files.append(train_path + file)
 
-    val_files = []
-    for file in os.listdir(val_path):
-        if file.endswith(".tfrecords"):
-            val_files.append(val_path + file)
+        val_files = []
+        for file in os.listdir(val_path):
+            if file.endswith(".tfrecords"):
+                val_files.append(val_path + file)
 
-    raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
-    train_dataset = raw_train_dataset.map(read_tfrecord)
-    train_dataset = train_dataset.batch(batch_size)
+        raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
+        train_dataset = raw_train_dataset.map(read_tfrecord)
+        train_dataset = train_dataset.take(50000)
+        train_dataset = train_dataset.batch(batch_size, drop_remainder=True)
 
-    #obtain validation data
-    raw_val_dataset = tf.data.TFRecordDataset(val_files, num_parallel_reads=len(val_files))
-    val_dataset = raw_val_dataset.map(read_tfrecord)
-    val_dataset = val_dataset.batch(batch_size)
+        #obtain validation data
+        raw_val_dataset = tf.data.TFRecordDataset(val_files, num_parallel_reads=len(val_files))
+        val_dataset = raw_val_dataset.map(read_tfrecord)
+        val_dataset = val_dataset.take(25000)
+        val_dataset = val_dataset.batch(batch_size, drop_remainder=True)
 
-    # calculate loss vectors l with l = {l_1, l_2, ...., l_x}
-    # after this, we have an l for every S containing the loss of each signal
+        # calculate loss vectors l with l = {l_1, l_2, ...., l_x}
+        # after this, we have an l for every S containing the loss of each signal
 
-    # predict
-    s_ = model.predict(train_dataset)
-    v_ = model.predict(val_dataset)
-    s_ = s_.reshape(-1, window, signals)
-    v_ = v_.reshape(-1, window, signals)
+        # predict
+        s_ = model.predict(train_dataset)
+        v_ = model.predict(val_dataset)
+        train_dataset = train_dataset.unbatch()
+        val_dataset = val_dataset.unbatch()
 
-    # convert train dataset to numpy
-    # find out length
-    length_of_s = 0
-    for element in train_dataset:
-        length_of_s += 1
-    
-    # convert
-    s = np.empty((length_of_s, window, signals))
-    i = 0
-    for element in train_dataset.as_numpy_iterator():
-        s[i] = element
-        i+=1
+        # convert train dataset to numpy
+        # find out length
+        length_of_s = 0
+        for element in train_dataset:
+            length_of_s += 1
+        
+        # convert
+        s = np.empty((length_of_s, window, signals))
+        i = 0
+        for element in train_dataset.as_numpy_iterator():
+            s[i] = element
+            i+=1
 
-    # convert val dataset to numpy
-    # find out length
-    length_of_v = 0
-    for element in val_dataset:
-        length_of_v += 1
-    
-    # convert
-    v = np.empty((length_of_v, window, signals))
-    i = 0
-    for element in val_dataset.as_numpy_iterator():
-        v[i] = element
-        i+=1
+        # convert val dataset to numpy
+        # find out length
+        length_of_v = 0
+        for element in val_dataset:
+            length_of_v += 1
+        
+        # convert
+        v = np.empty((length_of_v, window, signals))
+        i = 0
+        for element in val_dataset.as_numpy_iterator():
+            v[i] = element
+            i+=1
 
-    # loss
-    s_squared_error = np.square(s - s_)
-    v_squared_error = np.square(v - v_)
+        # loss
+        s_squared_error = np.square(s - s_)
+        v_squared_error = np.square(v - v_)
 
-    # sum up and divide by window size
-    for idx in range(s_squared_error.shape[0]):
-        x = s_squared_error[idx] # S
-        x = np.sum(x, axis=0) / window
-        s_squared_error[idx] = x
+        # sum up and divide by window size
+        for idx in range(s_squared_error.shape[0]):
+            x = s_squared_error[idx] # S
+            x = np.sum(x, axis=0) / window
+            s_squared_error[idx] = x
 
-    # calculate Oi = mean(l_i) + 3*sigmar_i -> a threshold for every signal
-    l_i_mean = np.mean(s_squared_error, axis=0)
-    l_i_var = np.var(s_squared_error, axis=0)
+        # calculate Oi = mean(l_i) + 3*sigmar_i -> a threshold for every signal
+        l_i_mean = np.mean(s_squared_error, axis=0)
+        l_i_var = np.var(s_squared_error, axis=0)
 
-    O_i = l_i_mean + 3*l_i_var
+        O_i = l_i_mean + 3*l_i_var
 
-    # calculate signal losses of validation: sum up and divice by window size
-    for idx in range(v_squared_error.shape[0]):
-        x = v_squared_error[idx]
-        x = np.sum(x, axis=0) / window
-        v_squared_error[idx] = x
+        # calculate signal losses of validation: sum up and divice by window size
+        for idx in range(v_squared_error.shape[0]):
+            x = v_squared_error[idx]
+            x = np.sum(x, axis=0) / window
+            v_squared_error[idx] = x
 
-    # calculate error vectors r with r = {r_i | r_i = l_i/O_i for i = 1....x}
-    for idx in range(v_squared_error.shape[0]):
-        x = v_squared_error[idx]
-        x = x / O_i
-        v_squared_error[idx] = x
-    # calculate max(r) for every r
-    max_rs = []
-    for idx in range(v_squared_error.shape[0]):
-        r = v_squared_error[idx]
-        max_rs.append(max(r))
+        # calculate error vectors r with r = {r_i | r_i = l_i/O_i for i = 1....x}
+        for idx in range(v_squared_error.shape[0]):
+            x = v_squared_error[idx]
+            x = x / O_i
+            v_squared_error[idx] = x
+        # calculate max(r) for every r
+        max_rs = []
+        for idx in range(v_squared_error.shape[0]):
+            r = v_squared_error[idx]
+            max_rs.append(np.max(r))
 
-    O = np.percentile(max_rs, percentile)
-    np.save(O, outpath+'O.npy')
-    np.save(O_i, outpath+'O_i.npy')
+        O = np.percentile(max_rs, percentile*100)
+        np.save(outpath+'O.npy', O)
+        np.save(outpath+'O_i.npy', O_i)
 
-    print("O is: {}".format(O))
+        print("O is: {}".format(O))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
