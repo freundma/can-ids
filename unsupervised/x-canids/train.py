@@ -114,7 +114,7 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
 
         # callbacks
         checkpoint_filepath = checkpoint_path + "/weights.{epoch:02d}-{val_loss:2f}.hdf5"
-        callback_early_stopping=tf.keras.callbacks.EarlyStopping(monitor='loss', patience=50)
+        callback_early_stopping=tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
         callback_checkpoint = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
