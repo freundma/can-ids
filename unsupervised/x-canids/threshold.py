@@ -5,11 +5,12 @@
 import argparse
 import tensorflow as tf
 import numpy as np
+import os
 
 # Multi GPU setup
 # mirrored_strategy = tf.distribute.MirroredStrategy()
 
-def main(model_path, train_data, val_data, window, signals, batch_size, percentile):
+def main(model_path, data_path, outpath, window, signals, batch_size, percentile):
     # obtain model
     model = tf.keras.models.load_model(model_path)
 
@@ -27,20 +28,36 @@ def main(model_path, train_data, val_data, window, signals, batch_size, percenti
         return feature
 
     # obtain training data
-    raw_train_dataset = tf.data.TFRecordDataset(train_data)
+    train_path = data_path + 'train/'
+    val_path = data_path + 'val/'
+
+    train_files = []
+    for file in os.listdir(train_path):
+        if file.endswith(".tfrecords"):
+            train_files.append(train_path + file)
+
+    val_files = []
+    for file in os.listdir(val_path):
+        if file.endswith(".tfrecords"):
+            val_files.append(val_path + file)
+
+    raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
     train_dataset = raw_train_dataset.map(read_tfrecord)
-    train_dataset.batch(batch_size)
+    train_dataset = train_dataset.batch(batch_size)
 
     #obtain validation data
-    raw_val_dataset = tf.data.TFRecordDataset(val_data)
+    raw_val_dataset = tf.data.TFRecordDataset(val_files, num_parallel_reads=len(val_files))
     val_dataset = raw_val_dataset.map(read_tfrecord)
+    val_dataset = val_dataset.batch(batch_size)
 
     # calculate loss vectors l with l = {l_1, l_2, ...., l_x}
     # after this, we have an l for every S containing the loss of each signal
 
     # predict
     s_ = model.predict(train_dataset)
-    s_.unbatch()
+    v_ = model.predict(val_dataset)
+    s_ = s_.reshape(-1, window, signals)
+    v_ = v_.reshape(-1, window, signals)
 
     # convert train dataset to numpy
     # find out length
@@ -55,8 +72,22 @@ def main(model_path, train_data, val_data, window, signals, batch_size, percenti
         s[i] = element
         i+=1
 
+    # convert val dataset to numpy
+    # find out length
+    length_of_v = 0
+    for element in val_dataset:
+        length_of_v += 1
+    
+    # convert
+    v = np.empty((length_of_v, window, signals))
+    i = 0
+    for element in val_dataset.as_numpy_iterator():
+        v[i] = element
+        i+=1
+
     # loss
     s_squared_error = np.square(s - s_)
+    v_squared_error = np.square(v - v_)
 
     # sum up and divide by window size
     for idx in range(s_squared_error.shape[0]):
@@ -70,40 +101,38 @@ def main(model_path, train_data, val_data, window, signals, batch_size, percenti
 
     O_i = l_i_mean + 3*l_i_var
 
-    # find out length
-    length_of_val = 0
-    for element in val_dataset:
-        length_of_val += 1
+    # calculate signal losses of validation: sum up and divice by window size
+    for idx in range(v_squared_error.shape[0]):
+        x = v_squared_error[idx]
+        x = np.sum(x, axis=0) / window
+        v_squared_error[idx] = x
 
-    val_np = np.empty((length_of_val, window, signals))
-
-    i = 0
-    # take validation set and calculate error vectors r with r = {r_i | r_i = l_i/O_i for i = 1...x} -> results in {r_1,....,r_x}
-    for element in val_dataset.as_numpy_iterator():
-        element = np.sum(element, axis=0) / window
-        element = element / O_i
-        val_np[i] = element
-        i += 1
-    
+    # calculate error vectors r with r = {r_i | r_i = l_i/O_i for i = 1....x}
+    for idx in range(v_squared_error.shape[0]):
+        x = v_squared_error[idx]
+        x = x / O_i
+        v_squared_error[idx] = x
     # calculate max(r) for every r
     max_rs = []
-    for idx in range(val_np.shape[0]):
-        r = val_np[idx]
+    for idx in range(v_squared_error.shape[0]):
+        r = v_squared_error[idx]
         max_rs.append(max(r))
 
     O = np.percentile(max_rs, percentile)
+    np.save(O, outpath+'O.npy')
+    np.save(O_i, outpath+'O_i.npy')
 
     print("O is: {}".format(O))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', type=str, default= "./data/results/")
-    parser.add_argument('--train_data', type=str, default="./data/TFRecord.tfrecords")
-    parser.add_argument('--val_data', type=str, default="./data/TFRecord_val.tfrecords")
+    parser.add_argument('--model_path', type=str, default= "Data/results/")
+    parser.add_argument('--data_path', type=str, default="Data/datasplit/")
+    parser.add_argument('--outpath', type=str, default="Data/thresholds/")
     parser.add_argument('--window', type=int, default=150)
     parser.add_argument('--signals', type=int, default=197)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--percentile', type=float, default=0.96)
     args=parser.parse_args()
 
-    main(args.model_path, args.train_data, args.val_data, args.window, args.signals, args.batch_size, args.percentile)
+    main(args.model_path, args.data_path, args.outpath, args.window, args.signals, args.batch_size, args.percentile)
