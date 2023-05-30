@@ -21,6 +21,7 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
 
     # for each dataset read samples and split into train, test, validation
     dataset = tf.data.TFRecordDataset(files)
+    dataset = dataset.shuffle(500000)
 
     # get total amount of samples, hack because this metadata gets not stored
     num_samples = 0

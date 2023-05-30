@@ -21,42 +21,42 @@ mirrored_strategy = tf.distribute.MirroredStrategy()
 def x_canids_model(window, num_signals, latent_space_size):
     with mirrored_strategy.scope():
         model = Sequential()
-        model.add(Bidirectional(LSTM(num_signals, activation='relu',
-                                 input_shape=(window, num_signals), kernel_regularizer=tf.keras.regularizers.L1L2(), return_sequences=True)))
-        model.add(Bidirectional(LSTM(latent_space_size, activation='relu', kernel_regularizer=tf.keras.regularizers.L1L2(), 
+        model.add(Bidirectional(LSTM(num_signals, activation='tanh',
+                                 input_shape=(window, num_signals), return_sequences=True)))
+        model.add(Bidirectional(LSTM(latent_space_size, activation='tanh',
                                  return_sequences=False)))
         model.add(RepeatVector(window))
-        model.add(Bidirectional(LSTM(num_signals, activation='relu', kernel_regularizer=tf.keras.regularizers.L1L2(), 
+        model.add(Bidirectional(LSTM(num_signals, activation='tanh',
                                  return_sequences=True)))
-        model.add(Bidirectional(LSTM(num_signals, activation='relu', kernel_regularizer=tf.keras.regularizers.L1L2(), 
+        model.add(Bidirectional(LSTM(num_signals, activation='tanh',
                                  return_sequences=True)))
-        model.add(TimeDistributed(Dense(num_signals, kernel_regularizer=tf.keras.regularizers.L1L2())))
+        model.add(TimeDistributed(Dense(num_signals)))
     return model
 
 def x_canids_model_stock(window, num_signals):
     model = Sequential()
-    model.add((Bidirectional(LSTM(107, activation='relu',
+    model.add((Bidirectional(LSTM(107, activation='tanh',
                                   input_shape=(window, num_signals), return_sequences=True))))
-    model.add((Bidirectional(LSTM(125, activation='relu',
+    model.add((Bidirectional(LSTM(125, activation='tanh',
                                   return_sequences=False))))
     model.add(RepeatVector(window))
-    model.add(Bidirectional(LSTM(107, activation='relu',
+    model.add(Bidirectional(LSTM(107, activation='tanh',
                                  return_sequences=True)))
-    model.add(Bidirectional(LSTM(107, activation='relu',
+    model.add(Bidirectional(LSTM(107, activation='tanh',
                                  return_sequences=True)))
     model.add(TimeDistributed(Dense(num_signals)))
     return model
 
 def x_canids_model_alternative(window, num_signals):
     model = Sequential()
-    model.add((Bidirectional(LSTM(128, activation='relu',
+    model.add((Bidirectional(LSTM(128, activation='tanh',
                                   input_shape=(window, num_signals), return_sequences=True))))
-    model.add((Bidirectional(LSTM(64, activation='relu',
+    model.add((Bidirectional(LSTM(64, activation='tanh',
                                   return_sequences=False))))
     model.add(RepeatVector(window))
-    model.add(Bidirectional(LSTM(64, activation='relu',
+    model.add(Bidirectional(LSTM(64, activation='tanh',
                                  return_sequences=True)))
-    model.add(Bidirectional(LSTM(128, activation='relu',
+    model.add(Bidirectional(LSTM(128, activation='tanh',
                                  return_sequences=True)))
     model.add(TimeDistributed(Dense(num_signals)))
     return model
@@ -113,7 +113,7 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
         print(model.summary())
 
         # callbacks
-        checkpoint_filepath = checkpoint_path + "/weights.{epoch:02d}-{loss:2f}.hdf5"
+        checkpoint_filepath = checkpoint_path + "/weights.{epoch:02d}-{val_loss:2f}.hdf5"
         callback_early_stopping=tf.keras.callbacks.EarlyStopping(monitor='loss', patience=50)
         callback_checkpoint = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
