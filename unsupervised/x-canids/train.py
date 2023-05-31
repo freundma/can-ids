@@ -92,7 +92,7 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
             data = tf.io.parse_single_example(example, feature_description)
             x = data['X']
             feature = tf.reshape(x, shape=[window, num_signals])
-            feature = tf.debugging.assert_all_finite(feature, 'Input must by finite')
+            feature = tf.debugging.assert_all_finite(feature, 'Input must be finite')
             tf.debugging.assert_non_negative(feature, 'Input must be positive')
             label = tf.identity(feature)
             return (feature, label) # label = feature because of reconstruction, unsupervised learning

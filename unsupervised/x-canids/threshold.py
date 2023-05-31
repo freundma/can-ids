@@ -104,7 +104,7 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
 
         O_i = l_i_mean + 3*l_i_var
 
-        # calculate signal losses of validation: sum up and divice by window size
+        # calculate signal losses of validation: sum up and divide by window size
         for idx in range(v_squared_error.shape[0]):
             x = v_squared_error[idx]
             x = np.sum(x, axis=0) / window
