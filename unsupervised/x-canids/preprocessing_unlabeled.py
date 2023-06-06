@@ -69,13 +69,11 @@ def get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, co
     else:
         return None, cache
 
-def range_of_signals_constant(df, id):
+def get_constant_signals(df, id):
     df_id = df.loc[df['ID']==id]
     df_id = df_id.drop(['Time','ID'], axis=1)
     df_id = df_id.dropna(axis=1) 
     # just relevant signal columns left
-    mins = []
-    maxs = []
     constant_signals_list = []
     constant_signals = 0
     signal = 1
@@ -87,50 +85,23 @@ def range_of_signals_constant(df, id):
             constant_signals_list.append(signal)
             signal += 1
             continue
-        maxs.append(max)
-        mins.append(min)
         signal += 1
-    return mins, maxs, constant_signals, constant_signals_list
+    return constant_signals, constant_signals_list
 
-def range_of_signals_constant_from_json(df, id, constant_signals_list):
+def info_constant_signals(df, id):
     df_id = df.loc[df['ID']==id]
     df_id = df_id.drop(['Time','ID'], axis=1)
     df_id = df_id.dropna(axis=1) 
     # just relevant signal columns left
-    mins = []
-    maxs = []
-    constant_signals = 0
-    signal = 1
-    for col in df_id:
-        max = df_id[col].max()
-        min = df_id[col].min()
-        if (signal in constant_signals_list):
-            constant_signals += 1
-            signal += 1
-            continue
-        maxs.append(max)
-        mins.append(min)
-        signal += 1
-    return mins, maxs, constant_signals, constant_signals_list
-
-def range_of_signals(df, id):
-    df_id = df.loc[df['ID']==id]
-    df_id = df_id.drop(['Time','ID'], axis=1)
-    df_id = df_id.dropna(axis=1) 
-    # just relevant signal columns left
-    mins = []
-    maxs = []
     constant_signals = 0
     for col in df_id:
         max = df_id[col].max()
         min = df_id[col].min()
         if (max == min):
             constant_signals += 1
-        maxs.append(max)
-        mins.append(min)
-    return mins, maxs, constant_signals
+    return constant_signals
 
-def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_signal_file, truncate_to):
+def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_signal_file, min_max_file):
     df = pd.read_csv(inputfile, dtype={
         'Label': bool,
         'Time': float,
@@ -171,6 +142,13 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     offsets = []
     const_list = []
     constant_signals_total = 0
+
+    # extract global minimums and maximums of training, validation, test, and attack data
+    f = open(min_max_file)
+    mins_maxs_pack = json.load(f)
+    min_dict = mins_maxs_pack["mins"]
+    max_dict = mins_maxs_pack["maxs"]
+
     if (constant_signal_file):
         f = open(constant_signal_file)
         const_signal_pack = json.load(f)
@@ -179,24 +157,21 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
     cache = {}
     max_t = df['Time'].max()
     
-    # get min max of each
-    # if we have an external file saying which signals to exclude we do that
+    # if we have an external file saying which signals to exclude, we do that
     # if we exclude constant signals, but don't have an external file, the constant signals are determined here
-    # if we don't exlude constant signals we just count them and leave them in the set
+    # if we don't exlude constant signal, we just count them and leave them in the set
     for id in unique_id_list:
         if (exclude_constant_signals):
             if (constant_signal_file):
-                mins, maxs, constant_signals, const_list = range_of_signals_constant_from_json(df, id, const_dict[str(id)])
+                constant_signals = len(const_dict[str(id)])
             else:
-                mins, maxs, constant_signals, const_list = range_of_signals_constant(df, id)
+                constant_signals, const_list = get_constant_signals(df, id)
+                const_dict[str(id)] = const_list
         else:
-            mins, maxs, constant_signals = range_of_signals(df, id)
+            constant_signals = info_constant_signals(df, id)
         constant_signals_total += constant_signals
-        min_dict[str(id)] = mins
-        max_dict[str(id)] = maxs
-        const_dict[str(id)] = const_list
         if (not constant_signal_file):
-            offsets.append(len(mins))
+            offsets.append(len(min_dict[str(id)]))
 
     # ambient dyno drive winter: 465 constant signals
     # ambient dyno drive basic long: 363
@@ -213,8 +188,6 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
 
     # loop over time steps
     s_len = offsets[-1]
-    if (truncate_to):
-        s_len = truncate_to
     steps = 0
     total_s_len = int((max_t + delta_t)/delta_t)
     total_s = np.empty([total_s_len, s_len])
@@ -224,9 +197,6 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
         s, cache = get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, const_dict, exclude_constant_signals)
     
         if (not(s is None)):
-            if (truncate_to):
-                s = s[:truncate_to]
-            #s_w[steps % w] = s
             total_s[steps] = s # collect all scaled vectors s
             steps += 1
     
@@ -263,7 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('--windowsize', type=int, default=200)
     parser.add_argument('--exclude_constant_signals', action='store_true')
     parser.add_argument('--constant_signal_file', type=str)
-    parser.add_argument('--truncate_to', type=int)
+    parser.add_argument('--min_max_file', type=str, default="Data/ranges/min_max_merge.json")
     args = parser.parse_args()
 
-    main(args.infile, args.outfile, args.timesteps, args.windowsize, args.exclude_constant_signals, args.constant_signal_file, args.truncate_to)
+    main(args.infile, args.outfile, args.timesteps, args.windowsize, args.exclude_constant_signals, args.constant_signal_file, args.min_max_file)
