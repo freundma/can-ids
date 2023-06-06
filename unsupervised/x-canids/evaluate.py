@@ -9,12 +9,17 @@ import tensorflow as tf
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
 def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
     # convert attack_dataset to numpy array
     length = 0
     i = 0
     for element in dataset:
-        lengt_of_attacks += 1
+        length += 1
     dataset_np = np.empty((length, window, signals))
     for element in dataset.as_numpy_iterator():
         dataset_np[i] = element
@@ -29,15 +34,16 @@ def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
         squared_error[idx] = x
 
     # calculate error vectors and intrusion score -> make prediction
+    predictions = np.empty((length))
     for idx in range(squared_error.shape[0]):
         x = squared_error[idx]
         x = x / O_i
         if (np.max(x) >= O):
-            squared_error[idx] = 1
+            predictions[idx] = 1
         else:
-            squared_error[idx] = 0
+            predictions[idx] = 0
 
-    return squared_error
+    return predictions.astype(int)
 
 def evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals):
     print("reading attack data from disk.....")
@@ -59,12 +65,15 @@ def evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_featur
     for label in labels.as_numpy_iterator():
         labels_np[i] = label
         i += 1
+    labels_np = labels_np.astype(int)
 
-    attack_dataset = attack_dataset.batch(batch_size, drop_remainder=True)
+    attack_dataset = attack_dataset.batch(batch_size, drop_remainder=False)
 
     print("predicting intrusions.....")
     reconstruction = model.predict(attack_dataset)
+    attack_dataset = attack_dataset.unbatch()
     predictions = detect_intrusions(attack_dataset, reconstruction, O, O_i, window, signals)
+    #print (predictions)
 
     print("calculating confusion matrix.....")
     tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
@@ -95,18 +104,24 @@ def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, windo
             benign_files.append(benign_path + file)
     
     raw_benign_dataset = tf.data.TFRecordDataset(benign_files, num_parallel_reads=len(benign_files))
-    benign_dataset = raw_benign_dataset.map(read_tfrecord)
+    pre_benign_dataset = raw_benign_dataset.map(read_tfrecord)
 
     # labels as to numpy
     length = 0
-    for element in benign_dataset:
+    for element in pre_benign_dataset:
         length += 1
     labels_np = np.zeros((length))
+
+    #if (length > 100000):
+    #    benign_dataset = pre_benign_dataset.take(75000)
+    #else:
+    benign_dataset = pre_benign_dataset
     
-    benign_dataset = benign_dataset.batch(batch_size, drop_remainder=True)
+    benign_dataset = benign_dataset.batch(batch_size, drop_remainder=False)
 
     print("predicting intrusions.....")
     reconstruction = model.predict(benign_dataset)
+    benign_dataset = benign_dataset.unbatch()
     predictions = detect_intrusions(benign_dataset, reconstruction, O, O_i, window, signals)
 
     print("calculating confusion matrix.....")
@@ -133,7 +148,7 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
 
     feature_description_label = {
             'X': tf.io.FixedLenFeature([input_dim], tf.float32),
-            'Y': tf.io.FixedLenFeature([1], tf.int64)
+            'Y': tf.io.FixedLenFeature([window], tf.int64)
     }
 
     def read_tfrecord_feature(example):
@@ -148,15 +163,17 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
 
         data = tf.io.parse_single_example(example, feature_description_label)
         y = data['Y'] # label
-        return y
+        return tf.reduce_max(y)
 
     O = np.load(threshold_path+'O.npy')
     O_i = np.load(threshold_path+'O_i.npy')
+    print("O : {}".format(O))
+    print("O_i: {}".format(O_i))
 
     if attack_path:
         evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals)
     if benign_path:
-        evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord_feature)
+        evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord_feature, window, signals)
 
 
 if __name__ == '__main__':

@@ -61,7 +61,7 @@ def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
     for element in tqdm(val):
         val_writer.write(element.numpy())
         if ((i % samples_per_file) == 0):
-            train_writer = tf.io.TFRecordWriter(val_path.format(int(i/samples_per_file)))
+            val_writer = tf.io.TFRecordWriter(val_path.format(int(i/samples_per_file)))
         i += 1
     print("writing test data.....")
     i = 1

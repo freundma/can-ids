@@ -44,30 +44,15 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
 
         raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
         train_dataset = raw_train_dataset.map(read_tfrecord)
-        train_dataset = train_dataset.take(50000)
-        train_dataset = train_dataset.batch(batch_size, drop_remainder=True)
-
-        #obtain validation data
-        raw_val_dataset = tf.data.TFRecordDataset(val_files, num_parallel_reads=len(val_files))
-        val_dataset = raw_val_dataset.map(read_tfrecord)
-        val_dataset = val_dataset.take(25000)
-        val_dataset = val_dataset.batch(batch_size, drop_remainder=True)
-
-        # calculate loss vectors l with l = {l_1, l_2, ...., l_x}
-        # after this, we have an l for every S containing the loss of each signal
-
-        # predict
-        s_ = model.predict(train_dataset)
-        v_ = model.predict(val_dataset)
-        train_dataset = train_dataset.unbatch()
-        val_dataset = val_dataset.unbatch()
 
         # convert train dataset to numpy
+
+        # prepare numpy
         # find out length
         length_of_s = 0
         for element in train_dataset:
             length_of_s += 1
-        
+
         # convert
         s = np.empty((length_of_s, window, signals))
         i = 0
@@ -75,18 +60,64 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
             s[i] = element
             i+=1
 
+        s_ = np.empty((length_of_s, window, signals))
+
+        # split data for inference to avoid OOM
+        part_size = (800*batch_size)
+        iterations = length_of_s // part_size
+        rest = length_of_s % part_size
+
+        for i in range(iterations):
+            dataset_part = train_dataset.take(part_size)
+            dataset_part = dataset_part.batch(batch_size)
+            dataset_part_np = model.predict(dataset_part)
+            s_[i*part_size:(i+1)*part_size] = dataset_part_np
+            train_dataset = train_dataset.skip(part_size)
+
+        dataset_rest = train_dataset.take(rest)
+        dataset_rest = dataset_rest.batch(batch_size)
+        dataset_rest_np = model.predict(dataset_rest)
+        s_[(iterations)*part_size:] = dataset_rest_np
+
+        #obtain validation data
+        raw_val_dataset = tf.data.TFRecordDataset(val_files, num_parallel_reads=len(val_files))
+        val_dataset = raw_val_dataset.map(read_tfrecord)
+
         # convert val dataset to numpy
+
         # find out length
         length_of_v = 0
         for element in val_dataset:
             length_of_v += 1
-        
+
         # convert
         v = np.empty((length_of_v, window, signals))
         i = 0
         for element in val_dataset.as_numpy_iterator():
             v[i] = element
             i+=1
+
+        v_ = np.empty((length_of_v, window, signals))
+
+        # split data for inference to avoid OOM
+        part_size = (400*batch_size)
+        iterations = length_of_v // part_size
+        rest = length_of_v % part_size
+
+        for i in range(iterations):
+            dataset_part = val_dataset.take(part_size)
+            dataset_part = dataset_part.batch(batch_size)
+            dataset_part_np = model.predict(dataset_part)
+            v_[i*part_size:(i+1)*part_size] = dataset_part_np
+            val_dataset = val_dataset.skip(part_size)
+
+        dataset_rest = val_dataset.take(rest)
+        dataset_rest = dataset_rest.batch(batch_size)
+        dataset_rest_np = model.predict(dataset_rest)
+        v_[(iterations)*part_size:] = dataset_rest_np
+
+        # calculate loss vectors l with l = {l_1, l_2, ...., l_x}
+        # after this, we have an l for every S containing the loss of each signal
 
         # loss
         s_squared_error = np.square(s - s_)
