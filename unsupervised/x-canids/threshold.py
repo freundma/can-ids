@@ -43,15 +43,19 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
                 val_files.append(val_path + file)
 
         raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
-        train_dataset = raw_train_dataset.map(read_tfrecord)
+        pre_train_dataset = raw_train_dataset.map(read_tfrecord)
 
         # convert train dataset to numpy
 
         # prepare numpy
         # find out length
-        length_of_s = 0
-        for element in train_dataset:
-            length_of_s += 1
+        length_of_train = 0
+        for element in pre_train_dataset:
+            length_of_train += 1
+
+        # truncate to multiple of batch size
+        length_of_s = (length_of_train // batch_size) * batch_size
+        train_dataset = pre_train_dataset.take(length_of_s)
 
         # convert
         s = np.empty((length_of_s, window, signals))
@@ -81,14 +85,18 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
 
         #obtain validation data
         raw_val_dataset = tf.data.TFRecordDataset(val_files, num_parallel_reads=len(val_files))
-        val_dataset = raw_val_dataset.map(read_tfrecord)
+        pre_val_dataset = raw_val_dataset.map(read_tfrecord)
 
         # convert val dataset to numpy
 
         # find out length
-        length_of_v = 0
-        for element in val_dataset:
-            length_of_v += 1
+        length_of_validation = 0
+        for element in pre_val_dataset:
+            length_of_validation += 1
+
+        # truncate to multiple of batch size
+        length_of_v = (length_of_validation // batch_size) * batch_size
+        val_dataset = pre_val_dataset.take(length_of_v)
 
         # convert
         v = np.empty((length_of_v, window, signals))
