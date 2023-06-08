@@ -6,79 +6,128 @@ import tensorflow as tf
 import argparse
 from tqdm import tqdm
 import os
+import numpy as np
 
-def main(inpath, outpath, train_ratio, val_ratio, test_ratio):
+def convert_to_numpy(dataset, signals, length):
+    dataset_np = np.empty((length, signals))
+    i = 0
+    for element in dataset.as_numpy_iterator():
+        dataset_np[i] = element
+        i += 1
+    return dataset_np
+
+def apply_sliding_window(dataset_np, window, signals):
+    dataset_np_sw = np.lib.stride_tricks.sliding_window_view(dataset_np, (window, signals))
+    dataset_np_sw = dataset_np_sw.reshape(-1, window, signals)
+    dataset_np_sw = dataset_np_sw.reshape(-1, window*signals)
+    return dataset_np_sw
+
+def write_to_tfrecord(X, path, samples_per_file, file):
+    i = 1
+    writer = tf.io.TFRecordWriter(path.format(file + "_0"))
+    for idx in tqdm(range(X.shape[0])):
+        x = X[idx]
+        example = tf.train.Example(features=tf.train.Features(feature={
+            'X': tf.train.Feature(float_list=tf.train.FloatList(value=x))
+        }))
+        writer.write(example.SerializeToString())
+        if ((i % samples_per_file) == 0):
+                writer = tf.io.TFRecordWriter(path.format(file + "_" + str(int(i/samples_per_file))))
+        i += 1
+
+def main(inpath, outpath, window, signals, train_ratio, val_ratio, test_ratio):
     # get all tfrecord files
     files = []
     for file in os.listdir(inpath):
         if file.endswith(".tfrecords"):
             files.append(inpath+file)
-    
+
+    # feature description
+    feature_description = {
+        'S': tf.io.FixedLenFeature([signals], tf.float32)
+    }
+
+    def read_tfrecord(example):
+
+        data = tf.io.parse_single_example(example, feature_description)
+        s = data['S']
+        s = tf.debugging.assert_all_finite(s, 'Input must be finite')
+        return s
+
     # prepare tf outpaths
     train_path = outpath + 'train/train_{}.tfrecords'
     val_path = outpath + 'val/val_{}.tfrecords'
     test_path = outpath + 'test/test_{}.tfrecords'
 
-    # for each dataset read samples and split into train, test, validation
-    dataset = tf.data.TFRecordDataset(files)
-    dataset = dataset.shuffle(500000)
+    total_train_samples = 0
+    total_val_samples = 0
+    total_test_samples = 0
 
-    # get total amount of samples, hack because this metadata gets not stored
-    num_samples = 0
-    for element in dataset:
-        num_samples += 1
+    for file in files:
+        # extract
+        dataset_raw = tf.data.TFRecordDataset(file)
+        dataset = dataset_raw.map(read_tfrecord)
+
+        # train test val split
+
+        # get length of data
+        length_of_data = 0
+        for element in dataset:
+            length_of_data += 1
+
+        train_size = int(length_of_data*train_ratio)
+
+        val_size = int(length_of_data*val_ratio)
+
+        test_size = int(length_of_data*test_ratio)
+
+        train = dataset.take(train_size)
+
+        val = dataset.skip(train_size)
+        test = val.skip(val_size)
+        test = test.take(test_size) # small trick to avoid having too many samples, this drops a few samples. But we can live with that
+
+        val = val.take(val_size)
+
+        # convert train to numpy
+        train_np = convert_to_numpy(train, signals, train_size)
+        val_np = convert_to_numpy(val, signals, val_size)
+        test_np = convert_to_numpy(test, signals, test_size)
+
+        # apply sliding window
+        X_train = apply_sliding_window(train_np, window, signals)
+        total_train_samples += X_train.shape[0]
+
+        X_val = apply_sliding_window(val_np, window, signals)
+        total_val_samples += X_val.shape[0]
+
+        X_test = apply_sliding_window(test_np, window, signals)
+        total_test_samples += X_test.shape[0]
+
+        # write to tf_records
+        file_name = os.path.basename(file)
+        file_prefix = os.path.splitext(file_name)[0]
+        samples_per_file = 900
+
+        print("Writing datasplit for file {}.....".format(file_name))
+        write_to_tfrecord(X_train, train_path, samples_per_file, file_prefix)
+        write_to_tfrecord(X_val, val_path, samples_per_file, file_prefix)
+        write_to_tfrecord(X_test, test_path, samples_per_file, file_prefix)
     
-    train_size = int(num_samples*train_ratio)
-    val_size = int(num_samples*val_ratio)
-    test_size = int(num_samples*test_ratio)
-
-    print("total samples: {}".format(num_samples))
-    print("train samples: {}".format(train_size))
-    print("validation samples: {}".format(val_size))
-    print("test samples: {}".format(test_size))
-
-    # split data
-    train = dataset.take(train_size)
-
-    val = dataset.skip(train_size)
-    test = val.skip(val_size)
-
-    val = val.take(val_size)
-
-    # write data
-    print("writing train data.....")
-    i = 1
-    samples_per_file = 900
-    train_writer = tf.io.TFRecordWriter(train_path.format(0))
-    for element in tqdm(train):
-        train_writer.write(element.numpy())
-        if ((i % samples_per_file) == 0):
-            train_writer = tf.io.TFRecordWriter(train_path.format(int(i/samples_per_file)))
-        i += 1
-    print("writing validation data.....")
-    i = 1
-    val_writer = tf.io.TFRecordWriter(val_path.format(0))
-    for element in tqdm(val):
-        val_writer.write(element.numpy())
-        if ((i % samples_per_file) == 0):
-            val_writer = tf.io.TFRecordWriter(val_path.format(int(i/samples_per_file)))
-        i += 1
-    print("writing test data.....")
-    i = 1
-    test_writer = tf.io.TFRecordWriter(test_path.format(0))
-    for element in tqdm(test):
-        test_writer.write(element.numpy())
-        if ((i % samples_per_file) == 0):
-            test_writer = tf.io.TFRecordWriter(test_path.format(int(i/samples_per_file)))
-        i += 1
+    print("Total samples: {}".format(total_test_samples+total_train_samples+total_val_samples))
+    print("Total train samples: {}".format(total_train_samples))
+    print("Total validation samples: {}".format(total_val_samples))
+    print("Total test samples: {}".format(total_test_samples))
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--inpath', type=str, default='Data/TFRecords/')
     parser.add_argument('--outpath', type=str, default='Data/datasplit/')
+    parser.add_argument('--window', type=str, default=150)
+    parser.add_argument('--signals', type=str, default=197)
     parser.add_argument('--train_ratio', type=float, default=4/6)
     parser.add_argument('--val_ratio', type=float, default=1/6)
     parser.add_argument('--test_ratio', type=float, default=1/6)
     args = parser.parse_args()
 
-    main(args.inpath, args.outpath, args.train_ratio, args.val_ratio, args.test_ratio)
+    main(args.inpath, args.outpath, args.window, args.signals, args.train_ratio, args.val_ratio, args.test_ratio)

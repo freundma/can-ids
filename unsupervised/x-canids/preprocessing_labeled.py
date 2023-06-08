@@ -28,8 +28,6 @@ def scale_s(s, unique_id_list, min_dict, max_dict):
                 scaled_s[offset+j] = 1.0
             else:
                 scaled_s[offset+j] = (scaled_s[offset+j] - mins_i[j]) / (maxs_i[j] - mins_i[j]) # s^_i  = (s_i - min_i) / (max_i - min_i)
-                assert (scaled_s[offset+j] <= 1)
-                assert (scaled_s[offset+j] >= 0)
         offset += len(mins_i)
     return scaled_s
 

@@ -101,7 +101,7 @@ def info_constant_signals(df, id):
             constant_signals += 1
     return constant_signals
 
-def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_signal_file, min_max_file):
+def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_file, min_max_file):
     df = pd.read_csv(inputfile, dtype={
         'Label': bool,
         'Time': float,
@@ -201,20 +201,20 @@ def main(inputfile, outfile, delta_t, w, exclude_constant_signals, constant_sign
             steps += 1
     
     total_s = total_s[:steps] # truncate to true number of s
-    X = np.lib.stride_tricks.sliding_window_view(total_s, (w, s_len)) # sliding window every delt_t seconds e.g. 0.01
-    X = X.reshape(-1, w, s_len)
-    X = X.reshape(-1, w*s_len)
-    assert not np.any(np.isnan(X))
-    assert not np.any(np.isinf(X))
+    #X = np.lib.stride_tricks.sliding_window_view(total_s, (w, s_len)) # sliding window every delt_t seconds e.g. 0.01
+    #X = X.reshape(-1, w, s_len)
+    #X = X.reshape(-1, w*s_len)
+    assert not np.any(np.isnan(total_s))
+    assert not np.any(np.isinf(total_s))
     print("writing TFRecord.........")
-    for idx in tqdm(range(X.shape[0])):
-        x = X[idx]
+    for idx in tqdm(range(total_s.shape[0])):
+        s = total_s[idx]
         example = tf.train.Example(features=tf.train.Features(feature={
-            'X': tf.train.Feature(float_list=tf.train.FloatList(value=x))
+            'S': tf.train.Feature(float_list=tf.train.FloatList(value=s))
         }))
         writer.write(example.SerializeToString())
 
-    print("window: {}, number of signals: {}".format(w, s_len))
+    print("number of signals: {}".format(s_len))
     if (exclude_constant_signals):
         pack = {}
         pack["constant_signals"] = const_dict
@@ -230,10 +230,9 @@ if __name__ == '__main__':
     parser.add_argument('--infile', type=str, default="./ambient_street_driving_long.csv")
     parser.add_argument('--outfile', type=str, default="./")
     parser.add_argument('--timesteps', type=float, default=0.01)
-    parser.add_argument('--windowsize', type=int, default=200)
     parser.add_argument('--exclude_constant_signals', action='store_true')
     parser.add_argument('--constant_signal_file', type=str)
     parser.add_argument('--min_max_file', type=str, default="Data/ranges/min_max_merge.json")
     args = parser.parse_args()
 
-    main(args.infile, args.outfile, args.timesteps, args.windowsize, args.exclude_constant_signals, args.constant_signal_file, args.min_max_file)
+    main(args.infile, args.outfile, args.timesteps, args.exclude_constant_signals, args.constant_signal_file, args.min_max_file)
