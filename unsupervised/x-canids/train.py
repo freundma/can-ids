@@ -62,7 +62,7 @@ def x_canids_model_alternative(window, num_signals):
     return model
     
 
-def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_size, checkpoint_path, tensorboard_path, lr, from_checkpoint):
+def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_size, checkpoint_path, tensorboard_path, lr, from_model):
     # declare training, validation tfrecord files from data split
     train_path = inpath + 'train/'
     val_path = inpath + 'val/'
@@ -105,14 +105,14 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
         val_dataset = val_dataset.shuffle(25000)
         val_dataset = val_dataset.batch(batch_size, drop_remainder=True)
 
-        if (not from_checkpoint):
+        if (not from_model):
             model = x_canids_model(window, num_signals, latent_space_size)
             optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
             loss = tf.keras.losses.MeanSquaredError()
             model.compile(optimizer=optimizer, loss=loss)
             model.build((None, window, num_signals))
         else:
-            model = tf.keras.models.load_model(checkpoint_path)
+            model = tf.keras.models.load_model(outpath)
         print(model.summary())
 
         # callbacks
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_path', type=str, default="Data/results/checkpoints")
     parser.add_argument('--tensorboard_path', type=str, default="Data/results/tensorboards")
     parser.add_argument('--learning_rate', type=float, default=0.0001)
-    parser.add_argument('--from_checkpoint', action='store_true')
+    parser.add_argument('--from_model', action='store_true')
     args = parser.parse_args()
 
-    main(args.inpath, args.outpath, args.window, args.signals, args.epochs, args.batch_size, args.latent_space_size, args.checkpoint_path, args.tensorboard_path, args.learning_rate, args.from_checkpoint)
+    main(args.inpath, args.outpath, args.window, args.signals, args.epochs, args.batch_size, args.latent_space_size, args.checkpoint_path, args.tensorboard_path, args.learning_rate, args.from_model)
