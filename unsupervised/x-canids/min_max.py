@@ -101,7 +101,7 @@ def main(inpath, outpath, constant_signal_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--inpath', type=str, default="Data/csv_complete/")
+    parser.add_argument('--inpath', type=str, default="Data/csv_with_street/")
     parser.add_argument('--outpath', type=str, default="Data/ranges/")
     parser.add_argument('--constant_signal_file', type=str)
     args = parser.parse_args()
