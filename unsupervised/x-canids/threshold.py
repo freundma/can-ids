@@ -10,7 +10,7 @@ import os
 # Multi GPU setup
 mirrored_strategy = tf.distribute.MirroredStrategy()
 
-def main(model_path, data_path, outpath, window, signals, batch_size, percentile):
+def main(model_path, data_path, outpath, window, signals, batch_size):
     with mirrored_strategy.scope():
         # obtain model
         model = tf.keras.models.load_model(model_path)
@@ -44,8 +44,6 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
 
         raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
         pre_train_dataset = raw_train_dataset.map(read_tfrecord)
-        #pre_train_dataset = pre_train_dataset.shuffle(500000)
-        #pre_train_dataset = pre_train_dataset.take(300000)
 
         # convert train dataset to numpy
 
@@ -141,9 +139,9 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
 
         # calculate Oi = mean(l_i) + 3*sigmar_i -> a threshold for every signal
         l_i_mean = np.mean(s_squared_error, axis=0)
-        l_i_var = np.var(s_squared_error, axis=0)
+        l_i_std = np.std(s_squared_error, axis=0)
 
-        O_i = l_i_mean + 3*l_i_var
+        O_i = l_i_mean + 3*l_i_std
 
         # calculate signal losses of validation: sum up and divide by window size
         for idx in range(v_squared_error.shape[0]):
@@ -157,16 +155,18 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
             x = x / O_i
             v_squared_error[idx] = x
         # calculate max(r) for every r
-        max_rs = []
+        max_rs = np.empty((v_squared_error.shape[0]))
         for idx in range(v_squared_error.shape[0]):
             r = v_squared_error[idx]
-            max_rs.append(np.max(r))
+            max_rs[idx] = np.max(r)
 
-        O = np.percentile(max_rs, percentile*100)
-        np.save(outpath+'O.npy', O)
+        O = np.percentile(max_rs, 0.98*100) # example output
+
+        np.save(outpath+'max_rs.npy', max_rs)
         np.save(outpath+'O_i.npy', O_i)
 
-        print("O is: {}".format(O))
+        print("Saved max errors and O_is.....")
+        print("O with percentile of 0.98 would be: {}".format(O))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -176,7 +176,6 @@ if __name__ == '__main__':
     parser.add_argument('--window', type=int, default=150)
     parser.add_argument('--signals', type=int, default=197)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--percentile', type=float, default=0.96)
     args=parser.parse_args()
 
-    main(args.model_path, args.data_path, args.outpath, args.window, args.signals, args.batch_size, args.percentile)
+    main(args.model_path, args.data_path, args.outpath, args.window, args.signals, args.batch_size)
