@@ -44,6 +44,8 @@ def main(model_path, data_path, outpath, window, signals, batch_size, percentile
 
         raw_train_dataset = tf.data.TFRecordDataset(train_files, num_parallel_reads=len(train_files))
         pre_train_dataset = raw_train_dataset.map(read_tfrecord)
+        #pre_train_dataset = pre_train_dataset.shuffle(500000)
+        #pre_train_dataset = pre_train_dataset.take(300000)
 
         # convert train dataset to numpy
 

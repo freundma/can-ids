@@ -136,7 +136,7 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
             epochs=epochs,
             callbacks=[callback_early_stopping, callback_checkpoint, callback_tensorboard, callback_nan],
             validation_data=val_dataset,
-            initial_epoch=2000-(epochs-1) #if we start from an already trained model e.g. start from 501
+            initial_epoch=2000-epochs #if we start from an already trained model e.g. start from 501
         )
     
         model.save(outpath)
