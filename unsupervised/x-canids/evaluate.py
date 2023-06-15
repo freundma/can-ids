@@ -136,7 +136,7 @@ def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, windo
     print("fpr: {}".format(fpr))
 
 
-def main(attack_path, benign_path, model_path, threshold_path, window, signals, batch_size):
+def main(attack_path, benign_path, model_path, threshold_path, window, signals, batch_size, percentile):
     # obtain model
     model = tf.keras.models.load_model(model_path)
 
@@ -165,10 +165,10 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
         y = data['Y'] # label
         return tf.reduce_max(y)
 
-    O = np.load(threshold_path+'O.npy')
+    max_rs = np.load(threshold_path+'max_rs.npy')
     O_i = np.load(threshold_path+'O_i.npy')
+    O = np.percentile(max_rs, percentile*100)
     print("O : {}".format(O))
-    print("O_i: {}".format(O_i))
 
     if attack_path:
         evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals)
@@ -185,6 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('--window', type=int, default=150)
     parser.add_argument('--signals', type=int, default=197)
     parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--percentile', type=float, default=0.96)
     args = parser.parse_args()
 
-    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.window, args.signals, args.batch_size)
+    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.window, args.signals, args.batch_size, args.percentile)
