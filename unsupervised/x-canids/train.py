@@ -146,7 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('--inpath', type=str, default="Data/datasplit/")
     parser.add_argument('--outpath', type=str, default="Data/results/")
     parser.add_argument('--window', type=int, default=150)
-    parser.add_argument('--signals', type=int, default=197)
+    parser.add_argument('--signals', type=int, default=202)
     parser.add_argument('--epochs', type=int, default=500)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--latent_space_size', type=int, default=230)

@@ -174,7 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type=str, default="Data/datasplit/")
     parser.add_argument('--outpath', type=str, default="Data/thresholds/")
     parser.add_argument('--window', type=int, default=150)
-    parser.add_argument('--signals', type=int, default=197)
+    parser.add_argument('--signals', type=int, default=202)
     parser.add_argument('--batch_size', type=int, default=64)
     args=parser.parse_args()
 

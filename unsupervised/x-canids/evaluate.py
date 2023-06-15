@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, default="Data/results/")
     parser.add_argument('--threshold_path', type=str, default="Data/thresholds/")
     parser.add_argument('--window', type=int, default=150)
-    parser.add_argument('--signals', type=int, default=197)
+    parser.add_argument('--signals', type=int, default=202)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--percentile', type=float, default=0.96)
     args = parser.parse_args()
