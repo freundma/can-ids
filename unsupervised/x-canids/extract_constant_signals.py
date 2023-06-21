@@ -27,7 +27,7 @@ def get_constant_signals(df, id):
     for col in df_id:
         max = df_id[col].max()
         min = df_id[col].min()
-        if (max == min): #and (id != 208) and (id !=1255) and (id != 1760)): # evaluation will be conducted on those IDs
+        if (max == min and (id != 208) and (id !=1255) and (id != 1760)): # evaluation will be conducted on those IDs
             constant_signals += 1
             constant_signals_list.append(signal)
             signal += 1

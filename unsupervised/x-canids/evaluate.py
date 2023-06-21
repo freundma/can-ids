@@ -110,19 +110,37 @@ def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, windo
     length = 0
     for element in pre_benign_dataset:
         length += 1
-    labels_np = np.zeros((length))
 
-    #if (length > 100000):
-    #    benign_dataset = pre_benign_dataset.take(75000)
-    #else:
-    benign_dataset = pre_benign_dataset
-    
-    benign_dataset = benign_dataset.batch(batch_size, drop_remainder=False)
+    # split into multiple parts to avoid OOM
+
+    # truncate to multiple of batch size
+    length_of_b = (length // batch_size) * batch_size
+    benign_dataset = pre_benign_dataset.take(length_of_b)
+    benign_dataset_copy = pre_benign_dataset.take(length_of_b) # trick to keep the dataset is whole
+    labels_np = np.zeros((length_of_b)) #labels to numpy
 
     print("predicting intrusions.....")
-    reconstruction = model.predict(benign_dataset)
-    benign_dataset = benign_dataset.unbatch()
-    predictions = detect_intrusions(benign_dataset, reconstruction, O, O_i, window, signals)
+    # determine part size
+    part_size = (800*batch_size)
+    iterations = length_of_b // part_size
+    rest = length_of_b % part_size
+
+    reconstruction = np.empty((length_of_b, window, signals))
+
+    for i in range(iterations):
+        benign_dataset_part = benign_dataset.take(part_size)
+        benign_dataset_part = benign_dataset_part.batch(batch_size)
+        reconstruction_part_np = model.predict(benign_dataset_part)
+        reconstruction[i*part_size:(i+1)*part_size] = reconstruction_part_np
+        benign_dataset = benign_dataset.skip(part_size)
+
+    # rest
+    benign_dataset_rest = benign_dataset.take(rest)
+    benign_dataset_rest = benign_dataset_rest.batch(batch_size)
+    reconstruction_rest_np = model.predict(benign_dataset_rest)
+    reconstruction[(iterations)*part_size:] = reconstruction_rest_np
+    
+    predictions = detect_intrusions(benign_dataset_copy, reconstruction, O, O_i, window, signals)
 
     print("calculating confusion matrix.....")
     tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
