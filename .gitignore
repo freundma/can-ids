@@ -4,3 +4,5 @@
 /unsupervised/stats_dir
 /unsupervised/x-canids/data
 /unsupervised/x-canids/Results
+prepare_syncan.sh
+datasplit_log.txt

@@ -36,37 +36,49 @@ def get_constant_signals(df, id):
         signal += 1
     return constant_signals, constant_signals_list, signals_per_id
 
-def main (infile, outfile):
-    df = pd.read_csv(infile, dtype={
+def main (infile, outfile, syncan):
+    if (syncan):
+        df = pd.read_csv(infile, dtype={
         'Label': bool,
         'Time': float,
-        'ID': int,
+        'ID': str,
         'Signal_1_of_ID': float,
         'Signal_2_of_ID': float,
         'Signal_3_of_ID': float,
         'Signal_4_of_ID': float,
-        'Signal_5_of_ID': float,
-        'Signal_6_of_ID': float,
-        'Signal_7_of_ID': float,
-        'Signal_8_of_ID': float,
-        'Signal_9_of_ID': float,
-        'Signal_10_of_ID': float,
-        'Signal_11_of_ID': float,
-        'Signal_12_of_ID': float,
-        'Signal_13_of_ID': float,
-        'Signal_14_of_ID': float,
-        'Signal_15_of_ID': float,
-        'Signal_16_of_ID': float,
-        'Signal_17_of_ID': float,
-        'Signal_18_of_ID': float,
-        'Signal_19_of_ID': float,
-        'Signal_20_of_ID': float,
-        'Signal_21_of_ID': float,
-        'Signal_22_of_ID': float,
-    })
+        })
+    else:
+        df = pd.read_csv(infile, dtype={
+            'Label': bool,
+            'Time': float,
+            'ID': int,
+            'Signal_1_of_ID': float,
+            'Signal_2_of_ID': float,
+            'Signal_3_of_ID': float,
+            'Signal_4_of_ID': float,
+            'Signal_5_of_ID': float,
+            'Signal_6_of_ID': float,
+            'Signal_7_of_ID': float,
+            'Signal_8_of_ID': float,
+            'Signal_9_of_ID': float,
+            'Signal_10_of_ID': float,
+            'Signal_11_of_ID': float,
+            'Signal_12_of_ID': float,
+            'Signal_13_of_ID': float,
+            'Signal_14_of_ID': float,
+            'Signal_15_of_ID': float,
+            'Signal_16_of_ID': float,
+            'Signal_17_of_ID': float,
+            'Signal_18_of_ID': float,
+            'Signal_19_of_ID': float,
+            'Signal_20_of_ID': float,
+            'Signal_21_of_ID': float,
+            'Signal_22_of_ID': float,
+        })
 
     df = df.drop(['Label'], axis=1)
-    df = df[df.ID != 1649] # exlude ID with unregular signals
+    if (not syncan):
+        df = df[df.ID != 1649] # exlude ID with unregular signals
     unique_id_list = df['ID'].unique()
     unique_id_list.sort()
     unique_id_list = list(unique_id_list)
@@ -95,7 +107,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--infile', type=str, default="ambient_street_driving_long.csv")
     parser.add_argument('--outfile', type=str, default="Data/constant_signals.json")
+    parser.add_argument('--syncan', action='store_true')
     args = parser.parse_args()
 
-main(args.infile, args.outfile)
+main(args.infile, args.outfile, args.syncan)
 

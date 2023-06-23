@@ -101,37 +101,49 @@ def info_constant_signals(df, id):
             constant_signals += 1
     return constant_signals
 
-def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_file, min_max_file):
-    df = pd.read_csv(inputfile, dtype={
-        'Label': bool,
-        'Time': float,
-        'ID': int,
-        'Signal_1_of_ID': float,
-        'Signal_2_of_ID': float,
-        'Signal_3_of_ID': float,
-        'Signal_4_of_ID': float,
-        'Signal_5_of_ID': float,
-        'Signal_6_of_ID': float,
-        'Signal_7_of_ID': float,
-        'Signal_8_of_ID': float,
-        'Signal_9_of_ID': float,
-        'Signal_10_of_ID': float,
-        'Signal_11_of_ID': float,
-        'Signal_12_of_ID': float,
-        'Signal_13_of_ID': float,
-        'Signal_14_of_ID': float,
-        'Signal_15_of_ID': float,
-        'Signal_16_of_ID': float,
-        'Signal_17_of_ID': float,
-        'Signal_18_of_ID': float,
-        'Signal_19_of_ID': float,
-        'Signal_20_of_ID': float,
-        'Signal_21_of_ID': float,
-        'Signal_22_of_ID': float,
-    })
+def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_file, min_max_file, syncan):
+    if (syncan):
+        df = pd.read_csv(inputfile, dtype={
+            'Label': bool,
+            'Time': float,
+            'ID': str,
+            'Signal_1_of_ID': float,
+            'Signal_2_of_ID': float,
+            'Signal_3_of_ID': float,
+            'Signal_4_of_ID': float,
+        })
+    else:
+        df = pd.read_csv(inputfile, dtype={
+            'Label': bool,
+            'Time': float,
+            'ID': int,
+            'Signal_1_of_ID': float,
+            'Signal_2_of_ID': float,
+            'Signal_3_of_ID': float,
+            'Signal_4_of_ID': float,
+            'Signal_5_of_ID': float,
+            'Signal_6_of_ID': float,
+            'Signal_7_of_ID': float,
+            'Signal_8_of_ID': float,
+            'Signal_9_of_ID': float,
+            'Signal_10_of_ID': float,
+            'Signal_11_of_ID': float,
+            'Signal_12_of_ID': float,
+            'Signal_13_of_ID': float,
+            'Signal_14_of_ID': float,
+            'Signal_15_of_ID': float,
+            'Signal_16_of_ID': float,
+            'Signal_17_of_ID': float,
+            'Signal_18_of_ID': float,
+            'Signal_19_of_ID': float,
+            'Signal_20_of_ID': float,
+            'Signal_21_of_ID': float,
+            'Signal_22_of_ID': float,
+        })
 
     df = df.drop(['Label'], axis=1)
-    df = df[df.ID != 1649] # exlude ID with unregular signals
+    if (not syncan):
+        df = df[df.ID != 1649] # exlude ID with unregular signals
     unique_id_list = df['ID'].unique()
     unique_id_list.sort()
     unique_id_list = list(unique_id_list)
@@ -156,6 +168,7 @@ def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_
         offsets = const_signal_pack["offsets"]
     cache = {}
     max_t = df['Time'].max()
+    min_t = df['Time'].min()
     
     # if we have an external file saying which signals to exclude, we do that
     # if we exclude constant signals, but don't have an external file, the constant signals are determined here
@@ -178,6 +191,7 @@ def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_
     # ambient dyno drive basic short: 377
     # ambient dyno drive exercise all bits: 125
     # ambient highway street driving long: 293
+    # syncan: 0
 
     if (not constant_signal_file):
         offsets = compute_offsets(offsets)
@@ -192,7 +206,7 @@ def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_
     total_s_len = int((max_t + delta_t)/delta_t)
     total_s = np.empty([total_s_len, s_len])
     print("extracting.........")
-    for t in (tqdm(np.arange(delta_t, max_t + delta_t, delta_t))):
+    for t in (tqdm(np.arange(min_t + delta_t, max_t + delta_t, delta_t))):
 
         s, cache = get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, const_dict, exclude_constant_signals)
     
@@ -201,9 +215,6 @@ def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_
             steps += 1
     
     total_s = total_s[:steps] # truncate to true number of s
-    #X = np.lib.stride_tricks.sliding_window_view(total_s, (w, s_len)) # sliding window every delt_t seconds e.g. 0.01
-    #X = X.reshape(-1, w, s_len)
-    #X = X.reshape(-1, w*s_len)
     assert not np.any(np.isnan(total_s))
     assert not np.any(np.isinf(total_s))
     print("writing TFRecord.........")
@@ -233,6 +244,7 @@ if __name__ == '__main__':
     parser.add_argument('--exclude_constant_signals', action='store_true')
     parser.add_argument('--constant_signal_file', type=str)
     parser.add_argument('--min_max_file', type=str, default="Data/ranges/min_max_merge.json")
+    parser.add_argument('--syncan', action='store_true')
     args = parser.parse_args()
 
-    main(args.infile, args.outfile, args.timesteps, args.exclude_constant_signals, args.constant_signal_file, args.min_max_file)
+    main(args.infile, args.outfile, args.timesteps, args.exclude_constant_signals, args.constant_signal_file, args.min_max_file, args.syncan)

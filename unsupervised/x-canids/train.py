@@ -130,13 +130,18 @@ def main(inpath, outpath, window, num_signals, epochs, batch_size, latent_space_
             write_graph=False
         )
         callback_nan = tf.keras.callbacks.TerminateOnNaN()
+
+        if (from_model):
+            initial = 2000-epochs
+        else:
+            initial = 0
     
         model.fit(
             x=train_dataset,
             epochs=epochs,
             callbacks=[callback_early_stopping, callback_checkpoint, callback_tensorboard, callback_nan],
             validation_data=val_dataset,
-            initial_epoch=2000-epochs #if we start from an already trained model e.g. start from 501
+            initial_epoch=initial #if we start from an already trained model e.g. start from 501
         )
     
         model.save(outpath)

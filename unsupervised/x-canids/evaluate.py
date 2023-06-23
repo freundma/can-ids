@@ -72,29 +72,32 @@ def evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_featur
     print("predicting intrusions.....")
     reconstruction = model.predict(attack_dataset)
     attack_dataset = attack_dataset.unbatch()
-    predictions = detect_intrusions(attack_dataset, reconstruction, O, O_i, window, signals)
-    #print (predictions)
 
-    print("calculating confusion matrix.....")
-    tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
+    for o in O:
 
-    print("evaluation of attack data.....")
-    print("tn: {}".format(tn))
-    print("fp: {}".format(fp))
-    print("fn: {}".format(fn))
-    print("tp: {}".format(tp))
+        predictions = detect_intrusions(attack_dataset, reconstruction, o, O_i, window, signals)
+        #print (predictions)
 
-    fnr = fn / (tp + fn)
-    fpr = fp / (fp + tp)
-    precision = tp / (tp + fp)
-    recall = tp / (tp + fn)
-    f1 = 2 * ((precision * recall) / (precision + recall))
+        print("calculating confusion matrix.....")
+        tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
 
-    print("fnr: {}".format(fnr))
-    print("fpr: {}".format(fpr))
-    print("precision: {}".format(precision))
-    print("recall: {}".format(recall))
-    print("f1: {}".format(f1))
+        print("evaluation of attack data.....")
+        print("tn: {}".format(tn))
+        print("fp: {}".format(fp))
+        print("fn: {}".format(fn))
+        print("tp: {}".format(tp))
+
+        fnr = fn / (tp + fn)
+        fpr = fp / (fp + tp)
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+        f1 = 2 * ((precision * recall) / (precision + recall))
+
+        print("fnr: {}".format(fnr))
+        print("fpr: {}".format(fpr))
+        print("precision: {}".format(precision))
+        print("recall: {}".format(recall))
+        print("f1: {}".format(f1))
 
 def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, window, signals):
     print("reading benign data from disk.....")
@@ -185,8 +188,12 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
 
     max_rs = np.load(threshold_path+'max_rs.npy')
     O_i = np.load(threshold_path+'O_i.npy')
-    O = np.percentile(max_rs, percentile*100)
-    print("O : {}".format(O))
+    percentiles = [0.85, 0.9, 0.95, 0.99, 0.999]
+    O = []
+    for p in percentiles:
+        O.append(np.percentile(max_rs, p*100))
+    print("percentiles: {}".format(percentiles))
+    print("O: {}".format(O))
 
     if attack_path:
         evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals)
