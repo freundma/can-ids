@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--signals', type=int, default=202)
     parser.add_argument('--epochs', type=int, default=2000)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--latent_space_size', type=int, default=236)
+    parser.add_argument('--latent_space_size', type=int, default=515)
     parser.add_argument('--checkpoint_path', type=str, default="Data/results/checkpoints")
     parser.add_argument('--tensorboard_path', type=str, default="Data/results/tensorboards")
     parser.add_argument('--learning_rate', type=float, default=0.0001)
