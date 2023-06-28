@@ -142,19 +142,21 @@ def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, windo
     benign_dataset_rest = benign_dataset_rest.batch(batch_size)
     reconstruction_rest_np = model.predict(benign_dataset_rest)
     reconstruction[(iterations)*part_size:] = reconstruction_rest_np
+
+    for o in O:
     
-    predictions = detect_intrusions(benign_dataset_copy, reconstruction, O, O_i, window, signals)
+        predictions = detect_intrusions(benign_dataset_copy, reconstruction, o, O_i, window, signals)
 
-    print("calculating confusion matrix.....")
-    tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
+        print("calculating confusion matrix.....")
+        tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
 
-    print("evaluation of benign data.....")
-    print("tn: {}".format(tn))
-    print("fp: {}".format(fp))
+        print("evaluation of benign data.....")
+        print("tn: {}".format(tn))
+        print("fp: {}".format(fp))
 
-    fpr = fp / (fp + tn)
+        fpr = fp / (fp + tn)
 
-    print("fpr: {}".format(fpr))
+        print("fpr: {}".format(fpr))
 
 
 def main(attack_path, benign_path, model_path, threshold_path, window, signals, batch_size, percentile):
@@ -188,7 +190,7 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
 
     max_rs = np.load(threshold_path+'max_rs.npy')
     O_i = np.load(threshold_path+'O_i.npy')
-    percentiles = [0.85, 0.9, 0.95, 0.99, 0.999]
+    percentiles = [0.85, 0.9, 0.95, 0.96, 0.97, 0.98, 0.99, 0.999]
     O = []
     for p in percentiles:
         O.append(np.percentile(max_rs, p*100))
