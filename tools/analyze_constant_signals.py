@@ -75,7 +75,6 @@ def main(infile, outfile):
     df = df.drop(['Control','Type'], axis=1)
 
     unique_address_list = df['Address'].unique()
-    print(unique_address_list)
     unique_address_list.sort()
     unique_address_list = list(unique_address_list)
 
@@ -106,3 +105,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 main(args.infile, args.outfile)
+
+
+
+
