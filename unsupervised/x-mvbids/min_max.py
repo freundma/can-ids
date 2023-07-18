@@ -73,43 +73,42 @@ def main(inpath, outpath, constant_signal_file):
             'Signal_24_of_Address': str,
             'Signal_25_of_Address': str
         })
-    df = df.loc[df['Frame Type'] == 'Slave frame']
-    df = df.drop(['Control','Type','Frame Type','Payload'], axis=1)
+        df = df.loc[df['Frame Type'] == 'Slave frame']
+        df = df.drop(['Control','Type','Frame Type','Payload'], axis=1)
 
-    # convert hex payloads to integer
-    for i in range(1, 25):
-        df['Signal_{}_of_Address'.format(i)] = df['Signal_{}_of_Address'.format(i)].apply(convert_to_int)
+        # convert hex payloads to integer
+        for i in range(1, 25):
+            df['Signal_{}_of_Address'.format(i)] = df['Signal_{}_of_Address'.format(i)].apply(convert_to_int)
     
-    unique_address_list = df['Address'].unique()
-    unique_address_list.sort()
-    unique_address_list = list(unique_address_list)
+        unique_address_list = df['Address'].unique()
+        unique_address_list.sort()
+        unique_address_list = list(unique_address_list)
 
-    min_dict = {}
-    max_dict = {}
+        min_dict = {}
+        max_dict = {}
 
-    # get minimums, maximums
-    f = open(constant_signal_file)
-    constant_signal_pack = json.load(f)
-    const_dict = constant_signal_pack["constant_signals"]
-    for address in unique_address_list:
-        mins, maxs = range_of_signals(df, address, const_dict[address])
-        min_dict[address] = mins
-        max_dict[address] = maxs
+        # get minimums, maximums
+        f = open(constant_signal_file)
+        constant_signal_pack = json.load(f)
+        const_dict = constant_signal_pack["constant_signals"]
+        for address in unique_address_list:
+            mins, maxs = range_of_signals(df, address, const_dict[address])
+            min_dict[address] = mins
+            max_dict[address] = maxs
 
-    # save to file
-    pack = {}
-    pack["mins"] = min_dict
-    pack["maxs"] = max_dict
-    print(pack)
+        # save to file
+        pack = {}
+        pack["mins"] = min_dict
+        pack["maxs"] = max_dict
 
-    # outfile
-    file_name = os.path.basename(infile)
-    file = os.path.splitext(file_name)
+        # outfile
+        file_name = os.path.basename(infile)
+        file = os.path.splitext(file_name)
 
-    outfile = "min_max_" + file[0] + ".json"
+        outfile = "min_max_" + file[0] + ".json"
 
-    with open (outpath+outfile, 'w') as f:
-        json.dump(pack, f)
+        with open (outpath+outfile, 'w') as f:
+            json.dump(pack, f)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
