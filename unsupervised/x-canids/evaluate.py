@@ -45,7 +45,7 @@ def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
 
     return predictions.astype(int)
 
-def evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals):
+def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals):
     print("reading attack data from disk.....")
     attack_files = []
     for file in os.listdir(attack_path):
@@ -73,11 +73,12 @@ def evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_featur
     reconstruction = model.predict(attack_dataset)
     attack_dataset = attack_dataset.unbatch()
 
+    i = 0
     for o in O:
 
         predictions = detect_intrusions(attack_dataset, reconstruction, o, O_i, window, signals)
-        #print (predictions)
-
+        
+        print("percentile: {}".format(percentiles[i]))
         print("calculating confusion matrix.....")
         tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
 
@@ -98,8 +99,10 @@ def evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_featur
         print("precision: {}".format(precision))
         print("recall: {}".format(recall))
         print("f1: {}".format(f1))
+        print("---------------------------------------")
+        i += 1
 
-def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, window, signals):
+def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord, window, signals):
     print("reading benign data from disk.....")
     benign_files = []
     for file in os.listdir(benign_path):
@@ -143,10 +146,12 @@ def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, windo
     reconstruction_rest_np = model.predict(benign_dataset_rest)
     reconstruction[(iterations)*part_size:] = reconstruction_rest_np
 
+    i = 0
     for o in O:
     
         predictions = detect_intrusions(benign_dataset_copy, reconstruction, o, O_i, window, signals)
 
+        print("percentile: {}".format(percentiles[i]))
         print("calculating confusion matrix.....")
         tn, fp, fn, tp = confusion_matrix(labels_np, predictions).ravel()
 
@@ -157,6 +162,8 @@ def evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord, windo
         fpr = fp / (fp + tn)
 
         print("fpr: {}".format(fpr))
+        print("---------------------------------------")
+        i += 1
 
 
 def main(attack_path, benign_path, model_path, threshold_path, window, signals, batch_size, percentile):
@@ -190,7 +197,7 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
 
     max_rs = np.load(threshold_path+'max_rs.npy')
     O_i = np.load(threshold_path+'O_i.npy')
-    percentiles = [0.85, 0.9, 0.95, 0.96, 0.97, 0.98, 0.99, 0.999]
+    percentiles = [0.85, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 0.999]
     O = []
     for p in percentiles:
         O.append(np.percentile(max_rs, p*100))
@@ -198,9 +205,9 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
     print("O: {}".format(O))
 
     if attack_path:
-        evaluate_attack(model, batch_size, attack_path, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals)
+        evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals)
     if benign_path:
-        evaluate_benign(model, batch_size, benign_path, O, O_i, read_tfrecord_feature, window, signals)
+        evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord_feature, window, signals)
 
 
 if __name__ == '__main__':
