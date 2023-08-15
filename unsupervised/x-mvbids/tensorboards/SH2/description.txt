@@ -1,0 +1,2 @@
+Those tensorboards result from training just on one dataset. For that, the dataset was split into training, validaion, and test in a 4:1:1 split.
+Training was done with 2000 epochs and early stopping with a patience of 50.
