@@ -9,6 +9,7 @@ import json
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tqdm import tqdm
+from PIL import Image
 import argparse
 
 attributes = ['Timestamp', 'canID', 'DLC', 
@@ -75,7 +76,7 @@ def payload_sum(sample):
 
 mad = lambda x: x.mad()
     
-def preprocess(file_name):
+def preprocess(file_name, print_attack_frame, attack):
     df = dd.read_csv(file_name, header=None, names=attributes)
     print('Reading from {}: DONE'.format(file_name))
     print('Dask processing: -------------')
@@ -101,6 +102,23 @@ def preprocess(file_name):
     print('Preprocessing: DONE')
     print('#Normal: ', df[df['label'] == 0].shape[0])
     print('#Attack: ', df[df['label'] == 1].shape[0])
+    if (print_attack_frame):
+        df_attack = df.loc[df['label'] == 1]
+        df_normal = df.loc[df['label'] == 0]
+        index_attack = df_attack['label'].idxmin() # pick one value
+        index_normal = df_normal['label'].idxmin() # pick one value
+        bits_attack = np.array(df_attack.iloc[index_attack,0]).flatten()
+        bits_normal = np.array(df_normal.iloc[index_normal,0]).flatten()
+        #df_bits = df_attack.loc[[index]]
+        #df_bits = df_bits.drop(['label'],axis=1)
+        #bits = df_bits.to_numpy().flatten()
+        carr = np.array([(255,255,255), (0,0,0)], dtype='uint8')
+        data_attack = carr[bits_attack].reshape(-1,29,3)
+        data_normal = carr[bits_normal].reshape(-1,29,3)
+        img_attack = Image.fromarray(data_attack, 'RGB')
+        img_normal = Image.fromarray(data_normal, 'RGB')
+        img_attack.save('Data/ID_image_' + attack + '.png','PNG')
+        img_normal.save('Data/ID_image_' + attack + '_normal.png','PNG')
     return df[['features', 'label']].reset_index().drop(['index'], axis=1)
 
 def preprocess_altformat(file_name, total_normal, total_attack, alt_features):
@@ -227,7 +245,7 @@ def write_tfrecord(data, filename, alt_features):
         tfrecord_writer.write(serialize_example(row['features'], row['label'], alt_features))
     tfrecord_writer.close()    
 
-def main(indir, outdir, attacks, alt_features, dataset):
+def main(indir, outdir, attacks, alt_features, dataset, print_attack_frame):
     total_normal = 0
     total_attack = 0
     data_info = {}
@@ -238,7 +256,7 @@ def main(indir, outdir, attacks, alt_features, dataset):
             df, total_normal, total_attack = preprocess_altformat(finput, total_normal, total_attack, alt_features)
         else:
             finput = '{}/{}_dataset.csv'.format(indir, attack, alt_features)
-            df = preprocess(finput)
+            df = preprocess(finput, print_attack_frame, attack)
         print("Writing...................")
         foutput_attack = '{}/{}'.format(outdir, attack)
         foutput_normal = '{}/Normal_{}'.format(outdir, attack)
@@ -260,6 +278,7 @@ if __name__ == '__main__':
     parser.add_argument('--attack_type', type=str, default='hcrl')
     parser.add_argument('--alt_features_simple', action='store_true')
     parser.add_argument('--alt_features_complex', action='store_true')
+    parser.add_argument('--print_attack_frame', action='store_true')
     args = parser.parse_args()
     
     if args.attack_type == 'hcrl':
@@ -336,8 +355,8 @@ if __name__ == '__main__':
         attack_types = [args.attack_type]
 
     if (args.alt_features_simple):
-        main(args.indir, args.outdir, attack_types, 'simple', args.attack_type)
+        main(args.indir, args.outdir, attack_types, 'simple', args.attack_type, args.print_attack_frame)
     elif (args.alt_features_complex):
-        main(args.indir, args.outdir, attack_types, 'complex', args.attack_type)
+        main(args.indir, args.outdir, attack_types, 'complex', args.attack_type, args.print_attack_frame)
     else:
-       main(args.indir, args.outdir, attack_types, 'original', args.attack_type)
+       main(args.indir, args.outdir, attack_types, 'original', args.attack_type, args.print_attack_frame)
