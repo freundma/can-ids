@@ -43,9 +43,9 @@ def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
         else:
             predictions[idx] = 0
 
-    return predictions.astype(int)
+    return predictions.astype(int), x
 
-def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals):
+def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals, loss_path):
     print("reading attack data from disk.....")
     attack_files = []
     for file in os.listdir(attack_path):
@@ -76,7 +76,10 @@ def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tf
     i = 0
     for o in O:
 
-        predictions = detect_intrusions(attack_dataset, reconstruction, o, O_i, window, signals)
+        predictions, error_rates = detect_intrusions(attack_dataset, reconstruction, o, O_i, window, signals)
+        if (i == 0): # save error rates once in the beginning
+            np.save(loss_path+'error_rates.npy', error_rates)
+
         
         print("percentile: {}".format(percentiles[i]))
         print("calculating confusion matrix.....")
@@ -102,7 +105,7 @@ def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tf
         print("---------------------------------------")
         i += 1
 
-def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord, window, signals):
+def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord, window, signals, loss_path):
     print("reading benign data from disk.....")
     benign_files = []
     for file in os.listdir(benign_path):
@@ -149,7 +152,9 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
     i = 0
     for o in O:
     
-        predictions = detect_intrusions(benign_dataset_copy, reconstruction, o, O_i, window, signals)
+        predictions, error_rates = detect_intrusions(benign_dataset_copy, reconstruction, o, O_i, window, signals)
+        if (i == 0): # save error rates once in the beginning
+            np.save(loss_path+'error_rates.npy', error_rates)
 
         print("percentile: {}".format(percentiles[i]))
         print("calculating confusion matrix.....")
@@ -166,9 +171,10 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
         i += 1
 
 
-def main(attack_path, benign_path, model_path, threshold_path, window, signals, batch_size, percentile):
+def main(attack_path, benign_path, model_path, threshold_path, loss_path, window, signals, batch_size, percentile):
     # obtain model
     model = tf.keras.models.load_model(model_path)
+    print(model.summary())
 
     input_dim = signals * window
     
@@ -205,9 +211,9 @@ def main(attack_path, benign_path, model_path, threshold_path, window, signals, 
     print("O: {}".format(O))
 
     if attack_path:
-        evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals)
+        evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals, loss_path)
     if benign_path:
-        evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord_feature, window, signals)
+        evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord_feature, window, signals, loss_path)
 
 
 if __name__ == '__main__':
@@ -216,10 +222,11 @@ if __name__ == '__main__':
     parser.add_argument('--benign_path', type=str)
     parser.add_argument('--model_path', type=str, default="Data/results/")
     parser.add_argument('--threshold_path', type=str, default="Data/thresholds/")
+    parser.add_argument('--loss_path', type=str, default="Data/losses/")
     parser.add_argument('--window', type=int, default=150)
     parser.add_argument('--signals', type=int, default=202)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--percentile', type=float, default=0.96)
     args = parser.parse_args()
 
-    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.window, args.signals, args.batch_size, args.percentile)
+    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.loss_path, args.window, args.signals, args.batch_size, args.percentile)

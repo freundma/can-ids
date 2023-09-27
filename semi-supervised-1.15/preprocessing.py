@@ -121,7 +121,7 @@ def preprocess(file_name, print_attack_frame, attack):
         img_normal.save('Data/ID_image_' + attack + '_normal.png','PNG')
     return df[['features', 'label']].reset_index().drop(['index'], axis=1)
 
-def preprocess_altformat(file_name, total_normal, total_attack, alt_features):
+def preprocess_altformat(file_name, total_normal, total_attack, alt_features, attack, print_attack_frame):
     df = dd.read_csv(file_name, dtype={
         'label': bool,
         'timestamp': float, 
@@ -213,6 +213,23 @@ def preprocess_altformat(file_name, total_normal, total_attack, alt_features):
         total_normal = total_normal + df[df['label'] == 0].shape[0]
         print('#Attack: ', df[df['label'] == 1].shape[0])
         total_attack = total_attack + df[df['label'] == 1].shape[0]
+        if (print_attack_frame):
+            df_attack = df.loc[df['label'] == 1]
+            df_normal = df.loc[df['label'] == 0]
+            index_attack = df_attack['label'].idxmin() # pick one value
+            index_normal = df_normal['label'].idxmin() # pick one value
+            bits_attack = np.array(df_attack.iloc[index_attack,0]).flatten()
+            bits_normal = np.array(df_normal.iloc[index_normal,0]).flatten()
+        #df_bits = df_attack.loc[[index]]
+        #df_bits = df_bits.drop(['label'],axis=1)
+        #bits = df_bits.to_numpy().flatten()
+            carr = np.array([(255,255,255), (0,0,0)], dtype='uint8')
+            data_attack = carr[bits_attack].reshape(-1,29,3)
+            data_normal = carr[bits_normal].reshape(-1,29,3)
+            img_attack = Image.fromarray(data_attack, 'RGB')
+            img_normal = Image.fromarray(data_normal, 'RGB')
+            img_attack.save('Data/ID_image_' + attack + '.png','PNG')
+            img_normal.save('Data/ID_image_' + attack + '_normal.png','PNG')
         return df[['features', 'label']].reset_index().drop(['index'], axis=1), total_normal, total_attack
 
 def serialize_example(x, y, alt_features):
@@ -253,7 +270,7 @@ def main(indir, outdir, attacks, alt_features, dataset, print_attack_frame):
         print('Attack: {} ==============='.format(attack))
         if (dataset != 'hcrl' ):
             finput = '{}/{}.csv'.format(indir, attack)
-            df, total_normal, total_attack = preprocess_altformat(finput, total_normal, total_attack, alt_features)
+            df, total_normal, total_attack = preprocess_altformat(finput, total_normal, total_attack, alt_features, attack, print_attack_frame)
         else:
             finput = '{}/{}_dataset.csv'.format(indir, attack, alt_features)
             df = preprocess(finput, print_attack_frame, attack)
@@ -286,23 +303,23 @@ if __name__ == '__main__':
     elif (args.attack_type == 'tu'):
         attack_types = ['diagnostic', 'dosattack', 'fuzzing_canid', 'fuzzing_payload', 'replay']
     elif (args.attack_type == 'road_without_masquerade'):
-        attack_types = ['road_without_masquerade_32',
+        attack_types = [#'road_without_masquerade_32',
                         #'ambient_street_driving_long', # some ambient data to fill up the normal data gap
-                        #'correlated_signal_attack_1',
-                        #'correlated_signal_attack_2',
-                        #'correlated_signal_attack_3',
-                        #'fuzzing_attack_1',
-                        #'fuzzing_attack_2',
-                        #'fuzzing_attack_3',
-                        #'max_speedometer_attack_1',
-                        #'max_speedometer_attack_2',
-                        #'max_speedometer_attack_3',
-                        #'reverse_light_off_attack_1',
-                        #'reverse_light_off_attack_2',
-                        #'reverse_light_off_attack_3',
-                        #'reverse_light_on_attack_1',
-                        #'reverse_light_on_attack_2',
-                        #'reverse_light_on_attack_3'
+                        'correlated_signal_attack_1',
+                        'correlated_signal_attack_2',
+                        'correlated_signal_attack_3',
+                        'fuzzing_attack_1',
+                        'fuzzing_attack_2',
+                        'fuzzing_attack_3',
+                        'max_speedometer_attack_1',
+                        'max_speedometer_attack_2',
+                        'max_speedometer_attack_3',
+                        'reverse_light_off_attack_1',
+                        'reverse_light_off_attack_2',
+                        'reverse_light_off_attack_3',
+                        'reverse_light_on_attack_1',
+                        'reverse_light_on_attack_2',
+                        'reverse_light_on_attack_3'
                         ]
     elif (args.attack_type == 'road_with_masquerade'):
         attack_types = ['ambient_street_driving_long', # some ambient data to fill up the normal data gap

@@ -3,11 +3,7 @@
 # Purpose: Extract constant signals from dataset
 
 import pandas as pd
-import numpy as np
-import tensorflow as tf
 import argparse
-from tqdm import tqdm
-import sys
 import json
 
 def compute_offsets(offsets):
@@ -16,6 +12,7 @@ def compute_offsets(offsets):
     return offsets
 
 def get_constant_signals(df, id):
+    num_signals = 0
     df_id = df.loc[df['ID']==id]
     df_id = df_id.drop(['Time','ID'], axis=1)
     df_id = df_id.dropna(axis=1) 
@@ -25,16 +22,17 @@ def get_constant_signals(df, id):
     constant_signals = 0
     signal = 1
     for col in df_id:
+        num_signals += 1
         max = df_id[col].max()
         min = df_id[col].min()
-        if (max == min and (id != 208) and (id !=1255) and (id != 1760)): # evaluation will be conducted on those IDs
+        if ((max == min) and (id != 208) and (id !=1255) and (id != 1760)): # evaluation will be conducted on those IDs
             constant_signals += 1
             constant_signals_list.append(signal)
             signal += 1
             continue
         signals_per_id += 1
         signal += 1
-    return constant_signals, constant_signals_list, signals_per_id
+    return constant_signals, constant_signals_list, signals_per_id, num_signals
 
 def main (infile, outfile, syncan):
     if (syncan):
@@ -87,15 +85,19 @@ def main (infile, outfile, syncan):
     const_dict = {}
     offsets = []
     constant_signals_total = 0
+    signals_total = 0
 
     for id in unique_id_list:
-        constant_signals, const_list, signals_per_id = get_constant_signals(df, id)
+        constant_signals, const_list, signals_per_id, num_signals = get_constant_signals(df, id)
         const_dict[str(id)] = const_list
         offsets.append(signals_per_id)
         constant_signals_total += constant_signals
+        signals_total += num_signals
 
     offsets = compute_offsets(offsets)
 
+    print("number of signal streams: {}".format(len(unique_id_list)))
+    print("number of signals: {}".format(signals_total))
     print("number of constant signals: {}".format(constant_signals_total))
     pack = {}
     pack["constant_signals"] = const_dict
