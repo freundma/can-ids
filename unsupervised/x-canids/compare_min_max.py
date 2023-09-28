@@ -13,7 +13,7 @@ def main(infile1, infile2):
     pack2 = json.load(f2)
 
     mins1, mins2 = pack1["mins"], pack2["mins"]
-    maxs1, maxs2 = pack1["maxs"], pack2["mins"]
+    maxs1, maxs2 = pack1["maxs"], pack2["maxs"]
 
     for id in (mins1):
         for i in range(len(mins1[id])):
