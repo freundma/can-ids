@@ -111,6 +111,7 @@ def main(infile, outfile, delta_t, w, constant_signal_file, min_max_file):
     # Transfer Label
     # Get slave indices
     # set label to max(Label[index], Label[index-1])
+    # slave frame or master frame could be labeled depending on the attack
     slave_indices = df.index[(df['Frame Type'] == 'Slave frame')].tolist()
     for i in slave_indices:
         df.loc[i, 'Label'] = max(df.loc[i, 'Label'], df.loc[i-1, 'Label'])

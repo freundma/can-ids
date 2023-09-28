@@ -186,7 +186,7 @@ def main(inputfile, outfile, delta_t, exclude_constant_signals, constant_signal_
         if (not constant_signal_file):
             offsets.append(len(min_dict[str(id)]))
 
-    # ambient dyno drive winter: 465 constant signals
+    # ambient dyno drive winter: 465 constant signals (460 with ID != 208,1255,1760)
     # ambient dyno drive basic long: 363
     # ambient dyno drive basic short: 377
     # ambient dyno drive exercise all bits: 125

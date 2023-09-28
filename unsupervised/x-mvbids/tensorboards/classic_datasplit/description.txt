@@ -1,0 +1,2 @@
+Those tensorboards are from training with all available (4 Datasets). Those were split within themselves into training, validation, testing.
+Usually a split of 4 : 1 : 1 was used. Each part then contains data from every dataset. The training was usually done with a 2000 epochs and an early stopping with a patience value of 50.
