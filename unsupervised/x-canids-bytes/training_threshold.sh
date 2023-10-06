@@ -1,2 +1,0 @@
-python train.py --inpath Data/road_byte_based/datasplit/ --outpath Data/road_byte_based/results/10-03/ --batch_size 1024 --checkpoint_path Data/road_byte_based/results/checkpoints/10-03 --tensorboard_path Data/road_byte_based/results/tensorboards/10-03/
-python threshold.py --model_path Data/road_byte_based/results/10-03/ --data_path Data/road_byte_based/datasplit/ --outpath Data/road_byte_based/thresholds/10-03/
