@@ -9,8 +9,9 @@ import json
 
 def main(error_path, threshold_path, q, min_max_file):
     # load numpy arrays and derive threshold
-    error_rates = np.load(error_path+'error_rates.npy')
+    loss_vectors = np.load(error_path+'error_rates.npy')
     max_rs = np.load(threshold_path+'max_rs.npy')
+    O_i = np.load(threshold_path+'O_i.npy')
     O = np.percentile(max_rs, q*100)
 
     print("Theta : {}".format(O))
@@ -26,17 +27,21 @@ def main(error_path, threshold_path, q, min_max_file):
             signals.append(id+'_'+str(i))
     
     # pick first frame exceeding threshold
-    for idx in range (error_rates.shape[0]):
-        if (np.max(error_rates[idx]) >= O):
-            signal = signals[np.argmax(error_rates[idx])]
+    for idx in range (loss_vectors.shape[0]):
+        x = loss_vectors[idx]
+        x = x / O_i
+        if (np.max(x) >= O):
+            signal = signals[np.argmax(x)]
             print(signal + " caused intrusion alert!")
             # draw error rates
-            plt.bar(range(len(error_rates[idx]), error_rates[idx]),align='center')
-            plt.axhline(y=O, color = 'r', linestyle = '-')
-            plt.xticks(range(len(signals)), signals, size='small')
+            plt.bar(range(len(x)), x,align='center', label= 'error rate per signal')
+            plt.axhline(y=O, color = 'r', linestyle = '-', label='intrusion threshold for q=1')
+            #plt.xticks(range(len(signals)), signals, size='small')
             plt.xlabel("Signals")
             plt.ylabel("Error rate")
-            plt.show()
+            plt.legend()
+            plt.savefig('Data/road/explanation.png',dpi=400)
+            exit(0)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

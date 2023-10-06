@@ -35,7 +35,7 @@ def get_constant_bytes(df, id):
         byte += 1
     return constant_bytes, constant_bytes_list, bytes_per_id, num_bytes
 
-def main (infile, outfile, syncan):
+def main (infile, outfile):
     df = pd.read_csv(infile, dtype={
         'label': bool,
         'timestamp': float,
@@ -53,8 +53,7 @@ def main (infile, outfile, syncan):
 
     df = df.drop(['label'], axis=1)
     df = df.drop(['dlc'], axis=1)
-    if (not syncan):
-        df = df[df.id != '671'] # exlude id with unregular bytes
+    df = df[df.id != '671'] # exlude id with unregular bytes
     unique_id_list = df['id'].unique()
     unique_id_list.sort()
     unique_id_list = list(unique_id_list)

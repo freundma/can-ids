@@ -132,32 +132,35 @@ def main(model_path, data_path, outpath, window, signals, batch_size):
         v_squared_error = np.square(v - v_)
 
         # sum up and divide by window size
+        loss_vectors_train = np.empty((length_of_s, signals))
         for idx in range(s_squared_error.shape[0]):
             x = s_squared_error[idx] # S
             x = np.sum(x, axis=0) / window
-            s_squared_error[idx] = x
+            loss_vectors_train[idx] = x
 
         # calculate Oi = mean(l_i) + 3*sigmar_i -> a threshold for every signal
-        l_i_mean = np.mean(s_squared_error, axis=0)
-        l_i_std = np.std(s_squared_error, axis=0)
+        l_i_mean = np.mean(loss_vectors_train, axis=0)
+        l_i_std = np.std(loss_vectors_train, axis=0)
 
         O_i = l_i_mean + 3*l_i_std
 
         # calculate signal losses of validation: sum up and divide by window size
+        loss_vectors_validation = np.empty((length_of_v, signals))
         for idx in range(v_squared_error.shape[0]):
             x = v_squared_error[idx]
             x = np.sum(x, axis=0) / window
-            v_squared_error[idx] = x
+            loss_vectors_validation[idx] = x
 
         # calculate error vectors r with r = {r_i | r_i = l_i/O_i for i = 1....x}
-        for idx in range(v_squared_error.shape[0]):
-            x = v_squared_error[idx]
+        error_vectors = np.empty((length_of_v, signals))
+        for idx in range(loss_vectors_validation.shape[0]):
+            x = loss_vectors_validation[idx]
             x = x / O_i
-            v_squared_error[idx] = x
+            error_vectors[idx] = x
         # calculate max(r) for every r
-        max_rs = np.empty((v_squared_error.shape[0]))
-        for idx in range(v_squared_error.shape[0]):
-            r = v_squared_error[idx]
+        max_rs = np.empty((error_vectors.shape[0]))
+        for idx in range(error_vectors.shape[0]):
+            r = error_vectors[idx]
             max_rs[idx] = np.max(r)
 
         O = np.percentile(max_rs, 0.98*100) # example output

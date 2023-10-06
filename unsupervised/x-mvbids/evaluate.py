@@ -28,15 +28,16 @@ def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
     # determine signalwise loss
     squared_error = np.square(dataset_np - reconstruction)
 
+    loss_vectors = np.empty((length, signals))
     for idx in range(squared_error.shape[0]):
         x = squared_error[idx]
         x = np.sum(x, axis=0) / window
-        squared_error[idx] = x
+        loss_vectors[idx] = x
 
     # calculate error vectors and intrusion score -> make prediction
     predictions = np.empty((length))
-    for idx in range(squared_error.shape[0]):
-        x = squared_error[idx]
+    for idx in range(loss_vectors.shape[0]):
+        x = loss_vectors[idx]
         x = x / O_i
         if (np.max(x) >= O):
             predictions[idx] = 1
@@ -169,6 +170,7 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
 def main(attack_path, benign_path, model_path, threshold_path, window, signals, batch_size, percentile):
     # obtain model
     model = tf.keras.models.load_model(model_path)
+    print(model.summary())
 
     input_dim = signals * window
     

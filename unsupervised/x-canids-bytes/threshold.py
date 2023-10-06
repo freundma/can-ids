@@ -1,6 +1,6 @@
-# Date: 07-03-2023
+# Date: 10-12-2023
 # Author: Mario Freund
-# Purpose: Determine the intrusion threshold for x-mvbids
+# Purpose: Determine the intrusion threshold for x-canids byte-based
 
 import argparse
 import tensorflow as tf
@@ -10,13 +10,12 @@ import os
 # Multi GPU setup
 mirrored_strategy = tf.distribute.MirroredStrategy()
 
-def main(model_path, data_path, outpath, window, signals, batch_size):
+def main(model_path, data_path, outpath, window, bytes, batch_size):
     with mirrored_strategy.scope():
         # obtain model
         model = tf.keras.models.load_model(model_path)
-        print(model.summary())
 
-        input_dim = signals * window
+        input_dim = bytes * window
         feature_description = {
             'X': tf.io.FixedLenFeature([input_dim], tf.float32)
         }
@@ -25,7 +24,7 @@ def main(model_path, data_path, outpath, window, signals, batch_size):
 
             data = tf.io.parse_single_example(example, feature_description)
             x = data['X']
-            feature = tf.reshape(x, shape=[window, signals])
+            feature = tf.reshape(x, shape=[window, bytes])
             feature = tf.debugging.assert_all_finite(feature, 'Input must be finite')
             return feature
 
@@ -59,13 +58,13 @@ def main(model_path, data_path, outpath, window, signals, batch_size):
         train_dataset = pre_train_dataset.take(length_of_s)
 
         # convert
-        s = np.empty((length_of_s, window, signals))
+        s = np.empty((length_of_s, window, bytes))
         i = 0
         for element in train_dataset.as_numpy_iterator():
             s[i] = element
             i+=1
 
-        s_ = np.empty((length_of_s, window, signals))
+        s_ = np.empty((length_of_s, window, bytes))
 
         # split data for inference to avoid OOM
         part_size = (800*batch_size)
@@ -100,13 +99,13 @@ def main(model_path, data_path, outpath, window, signals, batch_size):
         val_dataset = pre_val_dataset.take(length_of_v)
 
         # convert
-        v = np.empty((length_of_v, window, signals))
+        v = np.empty((length_of_v, window, bytes))
         i = 0
         for element in val_dataset.as_numpy_iterator():
             v[i] = element
             i+=1
 
-        v_ = np.empty((length_of_v, window, signals))
+        v_ = np.empty((length_of_v, window, bytes))
 
         # split data for inference to avoid OOM
         part_size = (400*batch_size)
@@ -133,7 +132,7 @@ def main(model_path, data_path, outpath, window, signals, batch_size):
         v_squared_error = np.square(v - v_)
 
         # sum up and divide by window size
-        loss_vectors_train = np.empty((length_of_s, signals))
+        loss_vectors_train = np.empty((length_of_s, bytes))
         for idx in range(s_squared_error.shape[0]):
             x = s_squared_error[idx] # S
             x = np.sum(x, axis=0) / window
@@ -146,14 +145,14 @@ def main(model_path, data_path, outpath, window, signals, batch_size):
         O_i = l_i_mean + 3*l_i_std
 
         # calculate signal losses of validation: sum up and divide by window size
-        loss_vectors_validation = np.empty((length_of_v, signals))
+        loss_vectors_validation = np.empty((length_of_v, bytes))
         for idx in range(v_squared_error.shape[0]):
             x = v_squared_error[idx]
             x = np.sum(x, axis=0) / window
             loss_vectors_validation[idx] = x
 
         # calculate error vectors r with r = {r_i | r_i = l_i/O_i for i = 1....x}
-        error_vectors = np.empty((length_of_v, signals))
+        error_vectors = np.empty((length_of_v, bytes))
         for idx in range(loss_vectors_validation.shape[0]):
             x = loss_vectors_validation[idx]
             x = x / O_i
@@ -177,9 +176,9 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', type=str, default= "Data/results/")
     parser.add_argument('--data_path', type=str, default="Data/datasplit/")
     parser.add_argument('--outpath', type=str, default="Data/thresholds/")
-    parser.add_argument('--window', type=int, default=64)
-    parser.add_argument('--signals', type=int, default=271)
+    parser.add_argument('--window', type=int, default=150)
+    parser.add_argument('--bytes', type=int, default=244)
     parser.add_argument('--batch_size', type=int, default=64)
     args=parser.parse_args()
 
-    main(args.model_path, args.data_path, args.outpath, args.window, args.signals, args.batch_size)
+    main(args.model_path, args.data_path, args.outpath, args.window, args.bytes, args.batch_size)

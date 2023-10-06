@@ -1,4 +1,4 @@
-# Date: 05-31-2023
+# Date: 10-02-2023
 # Author: Mario Freund
 # Purpose: Evaluate x-canids
 
@@ -14,13 +14,13 @@ if gpus:
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
 
-def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
+def detect_intrusions(dataset, reconstruction, O, O_i, window, bytes):
     # convert attack_dataset to numpy array
     length = 0
     i = 0
     for element in dataset:
         length += 1
-    dataset_np = np.empty((length, window, signals))
+    dataset_np = np.empty((length, window, bytes))
     for element in dataset.as_numpy_iterator():
         dataset_np[i] = element
         i += 1
@@ -28,7 +28,7 @@ def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
     # determine signalwise loss
     squared_error = np.square(dataset_np - reconstruction)
 
-    loss_vectors = np.empty((length, signals))
+    loss_vectors = np.empty((length, bytes))
     for idx in range(squared_error.shape[0]):
         x = squared_error[idx]
         x = np.sum(x, axis=0) / window
@@ -46,7 +46,7 @@ def detect_intrusions(dataset, reconstruction, O, O_i, window, signals):
 
     return predictions.astype(int), loss_vectors
 
-def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals, loss_path):
+def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, bytes, loss_path):
     print("reading attack data from disk.....")
     attack_files = []
     for file in os.listdir(attack_path):
@@ -77,7 +77,7 @@ def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tf
     i = 0
     for o in O:
 
-        predictions, error_rates = detect_intrusions(attack_dataset, reconstruction, o, O_i, window, signals)
+        predictions, error_rates = detect_intrusions(attack_dataset, reconstruction, o, O_i, window, bytes)
         if (i == 0): # save error rates once in the beginning
             np.save(loss_path+'error_rates.npy', error_rates)
 
@@ -106,7 +106,7 @@ def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tf
         print("---------------------------------------")
         i += 1
 
-def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord, window, signals, loss_path):
+def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord, window, bytes, loss_path):
     print("reading benign data from disk.....")
     benign_files = []
     for file in os.listdir(benign_path):
@@ -135,7 +135,7 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
     iterations = length_of_b // part_size
     rest = length_of_b % part_size
 
-    reconstruction = np.empty((length_of_b, window, signals))
+    reconstruction = np.empty((length_of_b, window, bytes))
 
     for i in range(iterations):
         benign_dataset_part = benign_dataset.take(part_size)
@@ -153,7 +153,7 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
     i = 0
     for o in O:
     
-        predictions, error_rates = detect_intrusions(benign_dataset_copy, reconstruction, o, O_i, window, signals)
+        predictions, error_rates = detect_intrusions(benign_dataset_copy, reconstruction, o, O_i, window, bytes)
         if (i == 0): # save error rates once in the beginning
             np.save(loss_path+'error_rates.npy', error_rates)
 
@@ -172,12 +172,12 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
         i += 1
 
 
-def main(attack_path, benign_path, model_path, threshold_path, loss_path, window, signals, batch_size, percentile):
+def main(attack_path, benign_path, model_path, threshold_path, loss_path, window, bytes, batch_size, percentile):
     # obtain model
     model = tf.keras.models.load_model(model_path)
     print(model.summary())
 
-    input_dim = signals * window
+    input_dim = bytes * window
     
     feature_description = {
             'X': tf.io.FixedLenFeature([input_dim], tf.float32)
@@ -192,7 +192,7 @@ def main(attack_path, benign_path, model_path, threshold_path, loss_path, window
 
         data = tf.io.parse_single_example(example, feature_description)
         x = data['X']
-        feature = tf.reshape(x, shape=[window, signals])
+        feature = tf.reshape(x, shape=[window, bytes])
         feature = tf.debugging.assert_all_finite(feature, 'Input must be finite')
         return feature
 
@@ -212,9 +212,9 @@ def main(attack_path, benign_path, model_path, threshold_path, loss_path, window
     print("O: {}".format(O))
 
     if attack_path:
-        evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, signals, loss_path)
+        evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tfrecord_feature, read_tfrecord_label, window, bytes, loss_path)
     if benign_path:
-        evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord_feature, window, signals, loss_path)
+        evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tfrecord_feature, window, bytes, loss_path)
 
 
 if __name__ == '__main__':
@@ -225,9 +225,9 @@ if __name__ == '__main__':
     parser.add_argument('--threshold_path', type=str, default="Data/thresholds/")
     parser.add_argument('--loss_path', type=str, default="Data/losses/")
     parser.add_argument('--window', type=int, default=150)
-    parser.add_argument('--signals', type=int, default=202)
+    parser.add_argument('--bytes', type=int, default=244)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--percentile', type=float, default=0.96)
     args = parser.parse_args()
 
-    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.loss_path, args.window, args.signals, args.batch_size, args.percentile)
+    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.loss_path, args.window, args.bytes, args.batch_size, args.percentile)
