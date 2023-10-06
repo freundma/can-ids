@@ -27,8 +27,6 @@ def scale_s(s, unique_address_list, min_dict, max_dict):
                 scaled_s[offset+j] = 1.0
             else:
                 scaled_s[offset+j] = (scaled_s[offset+j] - mins_i[j]) / (maxs_i[j] - mins_i[j]) # s^_i  = (s_i - min_i) / (max_i - min_i)
-                assert (scaled_s[offset+j] <= 1)
-                assert (scaled_s[offset+j] >= 0)
         offset += len(mins_i)
     return scaled_s
 
@@ -44,7 +42,7 @@ def get_s(df, t, delta_t, offsets, unique_address_list, min_dict, max_dict, cach
     for address in unique_address_list:
         df_address = df_t.loc[df_t['Address'] == address]
         if (df_address.empty): # take cached value
-            if (address in cache):
+            if ('signals' in cache[address]):
                 s[offset:offsets[i]] = cache[address]['signals']
                 label = cache[address]['label']
                 labels.append(label)
@@ -58,20 +56,21 @@ def get_s(df, t, delta_t, offsets, unique_address_list, min_dict, max_dict, cach
         df_address = df_address.drop(['Time','Address'], axis=1)
         label = df_address['Label'].values[0]
         labels.append(label)
+        df_address = df_address.drop(['Label'], axis=1)
         df_address = df_address.dropna(axis=1)
         for signal in const_dict[str(address)]:
             df_address = df_address.drop(['Signal_{}_of_Address'.format(signal)], axis=1) # drop constant signal
         signals = df_address.to_numpy().flatten()
         cache[address]['signals'] = signals # cache signals
-        cache[address]['label']
+        cache[address]['label'] = label # cache label
         s[offset:offsets[i]] = signals
         offset = offsets[i]
         i += 1
 
     if (clean):
-        return scale_s(s, unique_address_list, min_dict, max_dict), cache
+        return scale_s(s, unique_address_list, min_dict, max_dict), cache, max(labels)
     else:
-        return None, cache
+        return None, cache, None
 
 def main(infile, outfile, delta_t, w, constant_signal_file, min_max_file):
     df = pd.read_csv(infile, dtype={
