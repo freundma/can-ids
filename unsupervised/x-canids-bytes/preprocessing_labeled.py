@@ -205,7 +205,7 @@ def main(inpath, outpath, delta_t, w, exclude_constant_bytes, constant_byte_file
         total_s_len = int((max_t - min_t + delta_t)/delta_t)
         total_s = np.empty([total_s_len, s_len])
         total_label = np.empty([total_s_len,1])
-        print("extracting.........")
+        print("extracting {}.........".format(inputfile))
         for t in (tqdm(np.arange(min_t + delta_t, max_t + delta_t, delta_t))):
 
             s, cache, label = get_s(df, t, delta_t, offsets, unique_id_list, min_dict, max_dict, cache, const_dict, exclude_constant_bytes)

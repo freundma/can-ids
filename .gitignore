@@ -6,5 +6,13 @@
 /unsupervised/x-canids/Results
 /unsupervised/x-mvbids/data
 /unsupervised/x-mvbids/Results
+/semi-supervised
+/semi-supervised-1.15
+/unsupervised/'indra copy.py'
+/unsupervised/indra-overview.jpg
+/unsupervised/indra.py
+/unsupervised/LICENSE
+/unsupervised/model.png
+/unsupervised/README.md
 prepare_syncan.sh
 datasplit_log.txt
