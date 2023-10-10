@@ -1,92 +1,40 @@
 # can-ids
 
+This repository contains implementations of X-CANIDS by Jeong et al. It is recommended to read the paper before using the repository:
 
+Jeong, Seonghoon, et al. "X-CANIDS: Signal-Aware Explainable Intrusion Detection System for Controller Area Network-Based In-Vehicle Network." arXiv preprint arXiv:2303.12278 (2023).
 
-## Getting started
+## Structure
+It is split into three sub parts: x-canids, x-canids-bytes, and x-mvbids.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The first one contains the implementation of X-CANIDS for signal-translated CAN datasets. It is specialized to the datasets [SynCAN](https://github.com/etas/SynCAN) by Hanselmann et al. [1] and [ROAD](https://0xsam.com/road/) by Bridges et al. [2]. However, it can also be adapted easily to other datasets. The second one contains an adaption to the byte-based datasets of [ROAD](https://0xsam.com/road/). The third one contains an adaption of the method to MVB data. The used MVB data is proprietary and cannot be provied.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+All three types of IDS follow the same general pattern of execution:
+1. extract_constant_signals.py -> indentify constant signals
+2. min-max.py -> determine ranges of each monitored signal
+3. merge-min-max.py -> generate common ranges for multiple files by merging the min-max-files
+4. preprocessing_labeled.py -> applies the feature extraction of X-CANIDS and includes labels for testing
+5. preprocessing_unlabeled.py -> applies the feature extraction of X-CANIDS and does not include labels
+6. train_val_test_split.py -> applies a train val test split on the extracted features
+7. train.py -> trains the model
+8. threshold.py -> determines the thresholds for intrusion detection based on validation and training data
+9. evaluate.py -> uses the model and thresholds to run evaluation on the attack and bening test data
 
-## Add your files
+Extra files:
+* apply_windowing.py -> can be used to apply windowing on a standalone tfrecord file with s-vectors
+* explanation.py -> can be used to make the loss of the first positive classified attack sample visible and can be adjusted for further use
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## Setup
+Each of the subfolders contains a Dockerfile that can be used for building a docker image with tensorflow and the other according requirements. It is recommended to run a container based on this image and mount a folder for external provision of datasets and to export the training results. A port mapping can be used to publish tensorboards. [NVIDIA container](https://developer.nvidia.com/nvidia-container-runtime) runtime is necessary:
 
+```bash
+cd can-ids/unsupervised/x-canids
+docker build . -t can-ids-unsupervised
+docker run -it --publish 6006:6006 --name can-ids-unsupervised-training --gpus all --mount type=bind,src="$(pwd)"/datasets,dst=/ids/Data can-ids-unsupervised bash
 ```
-cd existing_repo
-git remote add origin https://gitlab.hpi.de/mario.freund/can-ids.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.hpi.de/mario.freund/can-ids/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+The usage of each script can be derived directly in the python script.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+[1]: Verma, Miki E., et al. "Addressing the lack of comparability & testing in CAN intrusion detection research: A comprehensive guide to CAN IDS data & introduction of the ROAD dataset." arXiv preprint arXiv:2012.14600 (2020).
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+[2]: Hanselmann, Markus, et al. "CANet: An unsupervised intrusion detection system for high dimensional CAN bus data." Ieee Access 8 (2020): 58194-58205.
