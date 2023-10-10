@@ -1,6 +1,10 @@
 # Date: 06-15-2023
 # Author: Mario Freund
 # Purpose: Extract constant signals from dataset
+# Commandline arguments:
+#   --infile: A path to a csv file like one of the signal-extracted road dataset or syncan dataset as string
+#   --outfile: A path were to output the resulting json file to as string
+#   --syncan: A flag whether syncan or road is used
 
 import pandas as pd
 import argparse

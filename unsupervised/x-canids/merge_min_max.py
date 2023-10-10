@@ -1,6 +1,9 @@
 # Date: 06-06-2023
 # Author: Mario Freund
 # Purpose: Merge mins and maxs from multiple datasets
+# Commandline arguments:
+#   --inpath: A path to the min-max-files (json) which are to be merged as string
+#   --outpath: A path where the merged min-max-file should be saved as string
 
 import pandas as pd
 import argparse

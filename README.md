@@ -1,13 +1,11 @@
 # can-ids
 
-This repository contains implementations of X-CANIDS by Jeong et al. It is recommended to read the paper before using the repository:
-
-Jeong, Seonghoon, et al. "X-CANIDS: Signal-Aware Explainable Intrusion Detection System for Controller Area Network-Based In-Vehicle Network." arXiv preprint arXiv:2303.12278 (2023).
+This repository contains implementations of X-CANIDS by Jeong et al.[3] It is recommended to read the paper before using the repository. It is also recommended to read my [master's thesis](https://osm.hpi.de/theses/master) in the context of which this code was written.
 
 ## Structure
 It is split into three sub parts: x-canids, x-canids-bytes, and x-mvbids.
 
-The first one contains the implementation of X-CANIDS for signal-translated CAN datasets. It is specialized to the datasets [SynCAN](https://github.com/etas/SynCAN) by Hanselmann et al. [1] and [ROAD](https://0xsam.com/road/) by Bridges et al. [2]. However, it can also be adapted easily to other datasets. The second one contains an adaption to the byte-based datasets of [ROAD](https://0xsam.com/road/). The third one contains an adaption of the method to MVB data. The used MVB data is proprietary and cannot be provied.
+The first one contains the implementation of X-CANIDS for signal-translated CAN datasets. It is specialized to the datasets [SynCAN](https://github.com/etas/SynCAN) by Hanselmann et al. [2] and [ROAD](https://0xsam.com/road/) by Bridges et al. [1]. However, it can also be adapted easily to other datasets. The second one contains an adaption to the byte-based datasets of [ROAD](https://0xsam.com/road/). The third one contains an adaption of the method to MVB data. The used MVB data is proprietary and cannot be provided.
 
 All three types of IDS follow the same general pattern of execution:
 1. extract_constant_signals.py -> indentify constant signals
@@ -35,8 +33,13 @@ docker run -it --publish 6006:6006 --name can-ids-unsupervised-training --gpus a
 ## Usage
 The usage of each script can be derived directly in the python script.
 
+## Additional notes
+A main difference between the literature evaluation and my evaluation is that the [ROAD](https://0xsam.com/road/) does not provide the ranges of the signals in the dbc-file. Thus, the ranges need to be determined before on the training datasets.
+
 ## References
 
 [1]: Verma, Miki E., et al. "Addressing the lack of comparability & testing in CAN intrusion detection research: A comprehensive guide to CAN IDS data & introduction of the ROAD dataset." arXiv preprint arXiv:2012.14600 (2020).
 
 [2]: Hanselmann, Markus, et al. "CANet: An unsupervised intrusion detection system for high dimensional CAN bus data." Ieee Access 8 (2020): 58194-58205.
+
+[3]: Jeong, Seonghoon, et al. "X-CANIDS: Signal-Aware Explainable Intrusion Detection System for Controller Area Network-Based In-Vehicle Network." arXiv preprint arXiv:2303.12278 (2023).

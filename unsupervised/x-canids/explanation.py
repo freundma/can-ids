@@ -1,6 +1,11 @@
 # Date: 09-27-2023
 # Author: Mario Freund
 # Purpose: Visualize explainability of x-canids
+# Commandline arguments:
+#   --error_path: A path were to take the example error rates from as returned by evaluate.py as string
+#   --threshold_path: A path were to take the max_rs and O_is from as returned by threshold.py as string
+#   --q: The percentile to use as sensitivity parameter for intrusion detection 0<=q<=1 as float
+#   --min_max_file: The file were to take the signal-ranges from (.json) as returned by min_max.py as string
 
 import numpy as np
 import argparse

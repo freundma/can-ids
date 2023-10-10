@@ -2,6 +2,11 @@
 # Author: Mario Freund
 # Purpose: Apply a new training strategy where the CAN datasets are not split within themselves
 # Note: This script converts a series of signal vectors into training samples with a sliding window. TFRecords get split into multiple parts to increase reading performance.
+# Commandline arguments:
+#   --infile: The input file as returned by preprocessing_unlabeled.py as tfrecord file
+#   --outpath: The output path of the tfrecord files as string
+#   --window: The window size to be used as int
+#   --signals: The number of signals as int
 
 import tensorflow as tf
 import argparse
