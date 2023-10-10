@@ -35,6 +35,8 @@ docker run -it --publish 6006:6006 --name can-ids-unsupervised-training --gpus a
 ## Usage
 The usage of each script can be derived directly in the python script.
 
+## References
+
 [1]: Verma, Miki E., et al. "Addressing the lack of comparability & testing in CAN intrusion detection research: A comprehensive guide to CAN IDS data & introduction of the ROAD dataset." arXiv preprint arXiv:2012.14600 (2020).
 
 [2]: Hanselmann, Markus, et al. "CANet: An unsupervised intrusion detection system for high dimensional CAN bus data." Ieee Access 8 (2020): 58194-58205.
