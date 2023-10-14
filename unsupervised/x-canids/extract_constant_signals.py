@@ -3,6 +3,8 @@
 # Purpose: Extract constant signals from dataset
 # Commandline arguments:
 #   --infile: A path to a csv file like one of the signal-extracted road dataset or syncan dataset as string
+#       format of road csv: Label,Time,ID,Signal_1_of_ID,...,Signal_22_of_ID
+#       format of syncan csv: Label,Time,ID,Signal_1_of_ID, ...,Signal_4_of_ID
 #   --outfile: A path were to output the resulting json file to as string
 #   --syncan: A flag whether syncan or road is used
 

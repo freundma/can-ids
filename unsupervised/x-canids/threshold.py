@@ -1,6 +1,13 @@
 # Date: 05-11-2023
 # Author: Mario Freund
 # Purpose: Determine the intrusion threshold for x-canids
+# Commandline arguments:
+#   --model_path: A path to a model as produced by train.py as string
+#   --data_path: A path to a datasplit as produced by train_val_test_split.py as string; the subfolders /train/ and /val/ are needed.
+#   --outpath: A path where to output the max_rs and theta_is as string
+#   --window: The used window size as int
+#   --signals: The number of signals as int
+#   --batch_size: The batch size to be used as int
 
 import argparse
 import tensorflow as tf

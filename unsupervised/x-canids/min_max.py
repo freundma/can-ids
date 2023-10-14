@@ -1,6 +1,13 @@
 # Date: 06-06-2023
 # Author: Mario Freund
 # Purpose: Determine mins and maxs of signals in dataset, external constant signal file needs to be provided
+# Command line arguments:
+#   --inpath: A path to one or more csv files like the ones of the signal-extracted road dataset or syncan dataset as string
+#       format of road csv: Label,Time,ID,Signal_1_of_ID,...,Signal_22_of_ID
+#       format of syncan csv: Label,Time,ID,Signal_1_of_ID, ...,Signal_4_of_ID
+#   --outpath: A path where to output the signal ranges per csv as string
+#   --constant_signal_file: A path to a constant signal file as created by extract_constant_signals.py as string
+#   --syncan: A flag whether syncan or road is used
 
 import pandas as pd
 import argparse

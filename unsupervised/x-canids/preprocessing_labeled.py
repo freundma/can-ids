@@ -1,6 +1,18 @@
 # Date: 05-16-2023
 # Author: Mario Freund
-# Purpose: Preprocess ambient signal extracted data of road dataset as done in x-canids with labels
+# Purpose: Preprocess ambient signal extracted data of road dataset as done in x-canids with labels.
+#          The sliding window is applied in train_val_test_split.py
+#   --infile: A path to a csv file like one of the signal-extracted road dataset or syncan dataset as string
+#       format of road csv: Label,Time,ID,Signal_1_of_ID,...,Signal_22_of_ID
+#       format of syncan csv: Label,Time,ID,Signal_1_of_ID, ...,Signal_4_of_ID
+#   --outfile: A path where to save the output tfrecord file as string
+#   --timesteps: The timesteps in which the feature extraction should be executed (parameter t of X-CANDIS) as float
+#   --windowsize: The window size that is supposed to be used as int
+#   --exclude_constant_signals: A flag whether to exlude constant signals from the feature extraction
+#   --constant_signal_file: A path to a constant signal file as produced by extract_constant_signals.py as string
+#   --min_max_file: A path to the signal ranges that are supposed to be used for the min max scaling as string
+#   --syncan: A flag whether syncan or road is used
+
 
 import pandas as pd
 import numpy as np
