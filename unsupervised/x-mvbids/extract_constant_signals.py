@@ -1,6 +1,13 @@
 # Date: 06-26-2023
 # Author: Mario Freund
 # Purpose: Find out singel constant signals in the already split up payload of mvb data
+# Note: To execute this file, mostly proprietary MVB datasets are necessary. The field address shall contain the port address or device address.
+#       Each signal of address field must have the hex form <0xbeef>. The slave frame lines must have been joint with the master frame lines beforehand to join the address of the
+#       master frame with the corresponding slave frame.
+# Commandline arguments:
+#   --infile: A path to a csv file in master/ slave form with split payload as string
+#       format of csv: Time,Control,Type,Frame Type,Payload,Address,Signal_1_of_Address,...,Signal_25_of_Address
+#   --outfile: A path were to output the resulting json file to as string
 
 import sys
 import pandas as pd

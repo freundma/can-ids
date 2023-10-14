@@ -1,6 +1,15 @@
 # Date: 07-04-2023
 # Author: Mario Freund
 # Purpose: Split all tfrecord data into training, validation, test
+# Commandline arguments:
+#   --inpath: A path to one or more tfrecord files as produced by preprocessing_unlabeled.py as string
+#   --outpath: A path where to store the datasplit as string; the directory must contain the subfolders /train/, /val/, /test/
+#   --window: The used window size as int
+#   --signals: The number of byte fields as int
+#   --train_ratio: The train ratio as float < 1
+#   --val_ratio: The validation ratio as float < 1
+#   --test_ratio: The test ratio as float < 1
+# Note: The train, validation, and test ratios should add up to 1.
 
 import tensorflow as tf
 import argparse

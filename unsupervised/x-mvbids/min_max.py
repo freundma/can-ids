@@ -1,6 +1,14 @@
 # Date: 06-28-2023
 # Author: Mario Freund
 # Purpose: Determine mins and maxs of signals in dataset, external constant signal file needs to be provided
+# Note: To execute this file, mostly proprietary MVB datasets are necessary. The field address shall contain the port address or device address.
+#       Each signal of address field must have the hex form <0xbeef>. The slave frame lines must have been joint with the master frame lines beforehand to join the address of the
+#       master frame with the corresponding slave frame.
+# Commandline arguments:
+#   --inpath: A path to one or more csv files in master/ slave form with split payload as string
+#       format of csv: Time,Control,Type,Frame Type,Payload,Address,Signal_1_of_Address,...,Signal_25_of_Address
+#   --outpath: A path were to save the byte field ranges per csv input file as string
+
 
 import pandas as pd
 import argparse

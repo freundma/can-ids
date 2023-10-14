@@ -1,6 +1,15 @@
 # Date: 07-26-2023
 # Author: Mario Freund
 # Purpose: Evaluate x-mvbids
+# Command line arguments:
+#   --attack_path: A path to tfrecord files with labeled samples as returned by preprocessing_labeled.py as string
+#   --benign_path: A path to tfrecord files with unlabeled (benign) samples as returned by preprocessing_unlabeled.py as string
+#   --model_path: A path to the model as returned by train.py as string
+#   --threshold_path: A path to the max_rs and O_is as returned by threshold.py as string
+#   --loss_path: A path were an example error rate vector should be exported to as string
+#   --window: The window size to be used as int
+#   --signals: The number of byte fields as int
+#   --batch_size: The batch size to be used as int
 
 import argparse
 import sys

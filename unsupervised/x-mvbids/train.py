@@ -1,6 +1,18 @@
 # Date: 04-07-2023
 # Author: Mario Freund
 # Purpose: Train x-canids classifier with benign preprocessed data. This time with MVB data!
+# Commandline arguments:
+#   --inpath: A path to a datasplit as produced by train_val_test_split.py as string; the subfolders /train/ and /val/ must be included
+#   --outpath: A path were to save the trained model when finished as string
+#   --window: The used window size as int
+#   --signals: The number of byte fields as int
+#   --epochs: The number of epcohs to train as int
+#   --batch_size: The batch size to use as int
+#   --latent_space_size: The latent space size as int divided by two (for a latent space size of 500 type 250)
+#   --checkpoint_path: A path where to save checkpoints of the model as string
+#   --tensorboard_path: A path where to store a tensorboard with training statistics as string
+#   --learning_rate: The learning rate to be used as float
+#   --from model: A flag whether to continue with a trained model. It will be loaded from the outpath
 
 import argparse
 import sys

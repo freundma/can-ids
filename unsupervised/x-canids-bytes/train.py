@@ -60,21 +60,6 @@ def x_canids_model_stock(window, num_bytes):
     model.add(TimeDistributed(Dense(num_bytes)))
     return model
 
-def x_canids_model_alternative(window, num_bytes):
-    model = Sequential()
-    model.add((Bidirectional(LSTM(128, activation='tanh',
-                                  input_shape=(window, num_bytes), return_sequences=True))))
-    model.add((Bidirectional(LSTM(64, activation='tanh',
-                                  return_sequences=False))))
-    model.add(RepeatVector(window))
-    model.add(Bidirectional(LSTM(64, activation='tanh',
-                                 return_sequences=True)))
-    model.add(Bidirectional(LSTM(128, activation='tanh',
-                                 return_sequences=True)))
-    model.add(TimeDistributed(Dense(num_bytes)))
-    return model
-    
-
 def main(inpath, outpath, window, num_bytes, epochs, batch_size, latent_space_size, checkpoint_path, tensorboard_path, lr, from_model):
     # declare training, validation tfrecord files from data split
     train_path = inpath + 'train/'

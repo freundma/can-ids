@@ -1,7 +1,16 @@
 # Date: 06-28-2023
 # Author: Mario Freund
 # Purpose: Preprocess ambient mvb data after the concept of x-canids
-# Note: Complete constant payloads are expected be excluded before
+# Note: Complete constant payloads are expected be excluded before To execute this file, mostly proprietary MVB datasets are necessary. The field address shall contain the port address or device address.
+#       Each signal of address field must have the hex form <0xbeef>. The slave frame lines must have been joint with the master frame lines beforehand to join the address of the
+#       master frame with the corresponding slave frame.
+# Commandline arguments:
+#   --infile: A path to a csv file in master/ slave form with split payload as string
+#       format of csv: Time,Control,Type,Frame Type,Payload,Address,Signal_1_of_Address,...,Signal_25_of_Address
+#   --outfile: A path where to save the output tfrecord file as string
+#   --timesteps: The timesteps in which the feature extraction should be executed (parameter t of X-CANDIS) as float
+#   --constant_signal_file: A path to a constant signal file as produced by extract_constant_signals.py as string
+#   --min_max_file: A path to the byte field ranges that are supposed to be used for the min max scaling as string
 
 import pandas as pd
 import numpy as np

@@ -1,6 +1,11 @@
 # Date: 07-05-2023
 # Author: Mario Freund
 # Purpose: Convert MVB signal vectors into training samples with sliding window.
+# Commandline arguments:
+#   --infile: The input file as returned by preprocessing_unlabeled.py as tfrecord file
+#   --outpath: The output path of the tfrecord files as string
+#   --window: The window size to be used as int
+#   --signals: The number of byte fields as int
 
 import tensorflow as tf
 import argparse
