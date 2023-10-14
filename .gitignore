@@ -1,3 +1,6 @@
 /semi-supervised/
 /semi-supervised-1.15/
 *.sh
+/unsupervised/x-canids/data/
+/unsupervised/x-mvbids/data/
+/unsupervised/x-canids-bytes/data/

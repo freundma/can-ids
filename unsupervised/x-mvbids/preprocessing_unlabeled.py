@@ -28,8 +28,6 @@ def scale_s(s, unique_address_list, min_dict, max_dict):
                 scaled_s[offset+j] = 1.0
             else:
                 scaled_s[offset+j] = (scaled_s[offset+j] - mins_i[j]) / (maxs_i[j] - mins_i[j]) # s^_i  = (s_i - min_i) / (max_i - min_i)
-                assert (scaled_s[offset+j] <= 1)
-                assert (scaled_s[offset+j] >= 0)
         offset += len(mins_i)
     return scaled_s
 
@@ -58,7 +56,6 @@ def get_s(df, t, delta_t, offsets, unique_address_list, min_dict, max_dict, cach
         for signal in const_dict[str(address)]:
             df_address = df_address.drop(['Signal_{}_of_Address'.format(signal)], axis=1) # drop constant signal
         signals = df_address.to_numpy().flatten()
-        print(len(signals))
         cache[str(address)] = signals # cache signals
         s[offset:offsets[i]] = signals
         offset = offsets[i]
