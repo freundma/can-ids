@@ -1,6 +1,15 @@
 # Date: 10-02-2023
 # Author: Mario Freund
 # Purpose: Preprocess ambient byte extracted data of road dataset as done in x-canids with labels
+# Commandline arguments:
+#   --inpath: A path to one or more csv files like of the byte-based road dataset as string
+#       format of csv: label,timestamp,id,dlc,data0,...,data7
+#   --outpath: A path where to save the output tfrecord files as string
+#   --timesteps: The timesteps in which the feature extraction should be executed (parameter t of X-CANDIS) as float
+#   --windowsize: The window size that is supposed to be used as int
+#   --exclude_constant_bytes: A flag whether to exlude constant bytes from the feature extraction
+#   --constant_byte_file: A path to a constant byte file as produced by extract_constant_bytes.py as string
+#   --min_max_file: A path to the byte ranges that are supposed to be used for the min max scaling as string
 
 import pandas as pd
 import numpy as np

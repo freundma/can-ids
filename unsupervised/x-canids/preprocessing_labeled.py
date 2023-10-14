@@ -2,6 +2,7 @@
 # Author: Mario Freund
 # Purpose: Preprocess ambient signal extracted data of road dataset as done in x-canids with labels.
 #          The sliding window is applied in train_val_test_split.py
+# Commandline arguments:
 #   --infile: A path to a csv file like one of the signal-extracted road dataset or syncan dataset as string
 #       format of road csv: Label,Time,ID,Signal_1_of_ID,...,Signal_22_of_ID
 #       format of syncan csv: Label,Time,ID,Signal_1_of_ID, ...,Signal_4_of_ID

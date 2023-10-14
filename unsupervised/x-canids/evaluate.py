@@ -181,7 +181,7 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
         i += 1
 
 
-def main(attack_path, benign_path, model_path, threshold_path, loss_path, window, signals, batch_size, percentile):
+def main(attack_path, benign_path, model_path, threshold_path, loss_path, window, signals, batch_size):
     # obtain model
     model = tf.keras.models.load_model(model_path)
     print(model.summary())
@@ -236,7 +236,6 @@ if __name__ == '__main__':
     parser.add_argument('--window', type=int, default=150)
     parser.add_argument('--signals', type=int, default=202)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--percentile', type=float, default=0.96)
     args = parser.parse_args()
 
-    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.loss_path, args.window, args.signals, args.batch_size, args.percentile)
+    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.loss_path, args.window, args.signals, args.batch_size)

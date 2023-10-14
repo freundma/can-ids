@@ -1,6 +1,14 @@
 # Date: 10-02-2023
 # Author: Mario Freund
 # Purpose: Evaluate x-canids
+#   --attack_path: A path to tfrecord files with labeled samples as returned by preprocessing_labeled.py as string
+#   --benign_path: A path to tfrecord files with unlabeled (benign) samples as returned by preprocessing_unlabeled.py as string
+#   --model_path: A path to the model as returned by train.py as string
+#   --threshold_path: A path to the max_rs and O_is as returned by threshold.py as string
+#   --loss_path: A path were an example error rate vector should be exported to as string
+#   --window: The window size to be used as int
+#   --signals: The number of signals as int
+#   --batch_size: The batch size to be used as int
 
 import argparse
 import sys
@@ -172,7 +180,7 @@ def evaluate_benign(model, batch_size, benign_path, percentiles, O, O_i, read_tf
         i += 1
 
 
-def main(attack_path, benign_path, model_path, threshold_path, loss_path, window, bytes, batch_size, percentile):
+def main(attack_path, benign_path, model_path, threshold_path, loss_path, window, bytes, batch_size):
     # obtain model
     model = tf.keras.models.load_model(model_path)
     print(model.summary())
@@ -227,7 +235,6 @@ if __name__ == '__main__':
     parser.add_argument('--window', type=int, default=150)
     parser.add_argument('--bytes', type=int, default=244)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--percentile', type=float, default=0.96)
     args = parser.parse_args()
 
-    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.loss_path, args.window, args.bytes, args.batch_size, args.percentile)
+    main(args.attack_path, args.benign_path, args.model_path, args.threshold_path, args.loss_path, args.window, args.bytes, args.batch_size)

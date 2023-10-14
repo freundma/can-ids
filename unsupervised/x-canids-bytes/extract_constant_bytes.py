@@ -1,6 +1,10 @@
 # Date: 09-27-2023
 # Author: Mario Freund
 # Purpose: Extract constant byte fields from dataset
+# Commandline arguments:
+#   --infile: A path to a csv file like one of the byte-based road dataset as string
+#       format of csv: label,timestamp,id,dlc,data0,...,data7
+#   --outfile: A path were to output the resulting json file to as string
 
 import pandas as pd
 import argparse

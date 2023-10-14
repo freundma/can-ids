@@ -1,6 +1,12 @@
 # Date: 10-12-2023
 # Author: Mario Freund
 # Purpose: Determine the intrusion threshold for x-canids byte-based
+#   --model_path: A path to a model as produced by train.py as string
+#   --data_path: A path to a datasplit as produced by train_val_test_split.py as string; the subfolders /train/ and /val/ are needed.
+#   --outpath: A path where to output the max_rs and theta_is as string
+#   --window: The used window size as int
+#   --bytes: The number of bytes as int
+#   --batch_size: The batch size to be used as int
 
 import argparse
 import tensorflow as tf
@@ -125,7 +131,7 @@ def main(model_path, data_path, outpath, window, bytes, batch_size):
         v_[(iterations)*part_size:] = dataset_rest_np
 
         # calculate loss vectors l with l = {l_1, l_2, ...., l_x}
-        # after this, we have an l for every S containing the loss of each signal
+        # after this, we have an l for every S containing the loss of each byte
 
         # loss
         s_squared_error = np.square(s - s_)
@@ -138,13 +144,13 @@ def main(model_path, data_path, outpath, window, bytes, batch_size):
             x = np.sum(x, axis=0) / window
             loss_vectors_train[idx] = x
 
-        # calculate Oi = mean(l_i) + 3*sigmar_i -> a threshold for every signal
+        # calculate Oi = mean(l_i) + 3*sigmar_i -> a threshold for every byte
         l_i_mean = np.mean(loss_vectors_train, axis=0)
         l_i_std = np.std(loss_vectors_train, axis=0)
 
         O_i = l_i_mean + 3*l_i_std
 
-        # calculate signal losses of validation: sum up and divide by window size
+        # calculate byte losses of validation: sum up and divide by window size
         loss_vectors_validation = np.empty((length_of_v, bytes))
         for idx in range(v_squared_error.shape[0]):
             x = v_squared_error[idx]

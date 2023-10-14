@@ -1,6 +1,12 @@
 # Date: 09-28-2023
 # Author: Mario Freund
 # Purpose: Determine mins and maxs of byte values in dataset, external constant bytes file needs to be provided
+# Command line arguments:
+#   --infile: A path to a csv file like one of the byte-based road dataset as string
+#       format of csv: label,timestamp,id,dlc,data0,...,data7
+#   --outpath: A path where to output the byte ranges per csv as string
+#   --constant_signal_file: A path to a constant byte file as created by extract_constant_bytes.py as string
+
 
 import pandas as pd
 import argparse
