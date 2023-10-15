@@ -4,4 +4,5 @@
 /unsupervised/x-canids/data/
 /unsupervised/x-mvbids/data/
 /unsupervised/x-canids-bytes/data/
+/tools/
 /unsupervised/x-canids/split_val.py

@@ -34,7 +34,7 @@ docker run -it --publish 6006:6006 --name can-ids-unsupervised-training --gpus a
 The usage of each script can be derived directly in the python script.
 
 ## Additional notes
-A main difference between the literature evaluation and my evaluation is that the [ROAD](https://0xsam.com/road/) does not provide the ranges of the signals in the dbc-file. Thus, the ranges need to be determined before on the training datasets.
+A main difference between the literature evaluation and my evaluation is that the [ROAD](https://0xsam.com/road/) dataset does not provide the ranges of the signals in the dbc-file. Thus, the ranges need to be determined before on the training datasets.
 
 ## References
 
