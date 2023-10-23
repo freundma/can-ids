@@ -101,7 +101,7 @@ def evaluate_attack(model, batch_size, attack_path, percentiles, O, O_i, read_tf
         print("tp: {}".format(tp))
 
         fnr = fn / (tp + fn)
-        fpr = fp / (fp + tp)
+        fpr = fp / (fp + tn)
         precision = tp / (tp + fp)
         recall = tp / (tp + fn)
         f1 = 2 * ((precision * recall) / (precision + recall))

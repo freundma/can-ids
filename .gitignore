@@ -7,3 +7,6 @@
 /unsupervised/x-canids-bytes/data/
 /tools/
 /unsupervised/x-canids/split_val.py
+/unsupervised/x-canids/evaluate_suspension.py
+/unsupervised/x-canids-bytes/evaluate_suspension.py
+/unsupervised/x-mvbids/evaluate_suspension.py
